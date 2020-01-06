@@ -6,11 +6,11 @@ function main() {
     // ctx.fillRect(0, 0, 150, 75);
 
     // Create the game environment
-    var env = new Environment(7, 7, 3);
+    var env = new Environment(9, 9, 10);
     env.draw();
     
     setInterval(() => {
-        env.step(_.random(0, 3));
+        env.step(_.random(0, 4));
         env.draw();
     }, 500);
 }

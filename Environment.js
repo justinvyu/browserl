@@ -57,6 +57,7 @@ class Environment {
         // this.numPlayers = numPlayers;
         this.numEnemies = numEnemies;
         this.clock = 0; // Game clock;
+        this.numEntities = [...Array(height)].map(x => Array(width).fill(0));
 
         // Initialize the environment model as a 2D array of strings
         // this.model = [...Array(size)].map(x => Array(size).fill("_"));
@@ -99,6 +100,8 @@ class Environment {
             }
             gameStateStr += "</br>";
         }
+
+        gameStateStr += "</br>" + this.player.health;
         $("#gameText").html(gameStateStr);
     }
 

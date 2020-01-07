@@ -12,7 +12,8 @@ class Entity {
 
         this.x = spawnX;
         this.y = spawnY;
-        this.env.numEntities[this.x][this.y] += 1;
+
+        this.env.model[this.x][this.y].add(this);
 
         this.validActions = [UP, RIGHT, DOWN, LEFT, ATTACK];
     }
@@ -33,11 +34,12 @@ class Entity {
     }
 
     move(dx, dy) {
-        this.env.numEntities[this.x][this.y] -= 1;
+        this.env.model[this.x][this.y].remove(this);
         var loc = this.getPotentialLocation(dx, dy);
         this.x = loc[0];
         this.y = loc[1];
         this.env.numEntities[this.x][this.y] += 1;
+        this.env.model[this.x][this.y].add(this);
     }
 
     attack(other) {
@@ -58,18 +60,7 @@ class Entity {
                 this.move(0, 1);
             } else if (action == LEFT) {
                 this.move(-1, 0);
-            } else if (action == ATTACK) {
-                // Attack the enemy in this position
-                if (this.env.numEntities[this.x][this.y] > 1) {
-                    for (var enemyId in this.env.enemies) {
-                        var enemy = this.env.enemies[enemyId];
-                        if (enemy.x  == this.x && enemy.y == this.y) {
-                            this.attack(enemy);
-                            break;
-                        }
-                    }
-                }
-            }
+            } 
         } else {
             console.log("Invalid action, must be one of: ", this.validActions);
         }
@@ -79,10 +70,18 @@ class Entity {
 class Player extends Entity {
     constructor(env, spawnX, spawnY) {
         super(env, 50, 1, spawnX, spawnY);
+        this.validActions.push(ATTACK);
     }
 
     act(action) {
-        super.act(action);
+        if (action == ATTACK) {
+            // Attack the enemy in this position
+            if (this.env.model[this.x][this.y].containsEnemy()) {
+                this.attack(this.env.model[this.x][this.y].getEnemy());
+            }
+        } else {
+            super.act(action);
+        }
         this.health -= 1;
     }
 }
@@ -98,7 +97,7 @@ class Enemy extends Entity {
 
     move(dx, dy) {
         var loc = this.getPotentialLocation(dx, dy);
-        if (this.env.numEntities[loc[0]][loc[1]] <= 1) {
+        if (!this.env.model[loc[0]][loc[1]].containsEnemy()) {
             super.move(dx, dy);
         }
     }
@@ -114,7 +113,7 @@ class Enemy extends Entity {
                 super.attack(this.env.player);
             }
         } else if (!this.deathTrigger) {
-            this.env.numEntities[this.x][this.y] -= 1; 
+            this.env.model[this.x][this.y].remove(this);
             this.x = -1;
             this.y = -1;
             this.env.numEnemies -= 1;

@@ -1,4 +1,5 @@
-/*
+VALID_ENTRIES = ['Player', 'Enemy', 'Pellet'];
+
 class Space {
     constructor() {
         this.contents = {
@@ -6,17 +7,16 @@ class Space {
             'Enemy': null,
             'Pellet': null,
         };
-        this.validEntities = Object.keys(this.contents);
     }
     add(entity) {
         // Returns True if successfully added, false if an invalid entity passed in
         // or if there already exists an entity of that type
         if (typeof(entity) != "object" || 
-            !this.validEntities.includes(entity.constructor.name)) {
+            !VALID_ENTRIES.includes(entity.constructor.name)) {
             console.log("Must pass in an object of the type Player, Enemy, or Pellet");
             return false;
         }
-        className = entity.constructor.name;
+        var className = entity.constructor.name;
         if (this.contents[className] != null) {
             console.log(className + " already exists in this space");
             return false;
@@ -28,17 +28,28 @@ class Space {
         // Returns True if successfully removed, false if an invalid entity passed in
         // or if there does not exist an entity of that type
         if (typeof(entity) != "object" || 
-            !this.validEntities.includes(entity.constructor.name)) {
+            !VALID_ENTRIES.includes(entity.constructor.name)) {
             console.log("Must pass in an object of the type Player, Enemy, or Pellet");
             return false;
         }
-        className = entity.constructor.name;
+        var className = entity.constructor.name;
         if (this.contents[className] == null) {
             console.log(className + " does not exist in this space");
             return false;
         }
-        this.contents[className] = entity;
+        this.contents[className] = null;
         return true;
+    }
+
+    getPlayer() { return this.contents['Player']; }
+    getEnemy() { return this.contents['Enemy']; }
+    getPellet() { return this.contents['Pellet']; }
+    containsPlayer() { return this.contents['Player'] != null }
+    containsEnemy() { return this.contents['Enemy'] != null; }
+    containsPellet() { return this.contents['Pellet'] != null; }
+
+    atCapacity() {
+        return this.containsPlayer() && this.containsEnemy();
     }
     isEmpty() {
         return (
@@ -47,7 +58,6 @@ class Space {
             this.contents.pellet == null);
     }
 }
-*/
 
 class Environment {
     constructor(width, height, numEnemies) {
@@ -57,10 +67,16 @@ class Environment {
         // this.numPlayers = numPlayers;
         this.numEnemies = numEnemies;
         this.clock = 0; // Game clock;
-        this.numEntities = [...Array(height)].map(x => Array(width).fill(0));
 
-        // Initialize the environment model as a 2D array of strings
-        // this.model = [...Array(size)].map(x => Array(size).fill("_"));
+        // Initialize the environment model
+        this.model = [];
+        for (var x = 0; x < width; x += 1) {
+            this.model.push([]);
+            for (var y = 0; y < height; y += 1) {
+                this.model[x].push(new Space());
+            }
+        }
+        // this.model = [...Array(height)].map(x => Array(width).fill(new Space()));
 
         // Initialize the player into the environment
         // this.model[Math.floor(size / 2)][Math.floor(size / 2)] = "P";
@@ -76,6 +92,8 @@ class Environment {
             var enemyY = el % height;
             this.enemies[idx] = new Enemy(this, enemyX, enemyY, idx);
         });
+
+        this.pellets = {};
 
         // TODO: define observation space
         // TODO: define action space
@@ -107,12 +125,8 @@ class Environment {
         $("#gameText").html(gameStateStr);
     }
 
-    step(action) {
-        // Returns new observation, reward, done, and info
-        this.player.act(action);
-        _.each(this.enemies, (enemy, idx, list) => {
-            enemy.act();
-        });
+    getObservation() {
+        // Returns obs, reward, done
         var output = {};
         var obs, reward, done;
         if (this.player.health <= 0) {
@@ -125,7 +139,22 @@ class Environment {
         return output;
     }
 
-    getObservation() {
+    spawnPellets() {
+        // Spawn pellet
+        // var numPelletsToSpawn = _.random(0, 3);
+        // var pelletSpawns = _.sample(_.range(this.width * this.height), numPelletsToSpawn);
+        // _.each(pelletSpawns, (spawnLoc, idx, list) => {
+        //     var enemyX = Math.floor(spawnLoc / this.height);
+        //     var enemyY = spawnLoc % this.height;
+        // });
+    }
 
+    step(action) {
+        this.spawnPellets();
+        this.player.act(action);
+        _.each(this.enemies, (enemy, idx, list) => {
+            enemy.act();
+        });
+        return this.getObservation();
     }
 }

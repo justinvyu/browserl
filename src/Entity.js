@@ -5,10 +5,10 @@ var LEFT = 3;
 var ATTACK = 4;
 
 class Entity {
-    constructor(env, hp, attack, spawnX, spawnY) {
+    constructor(env, hp, damage, spawnX, spawnY) {
         this.env = env
         this.health = hp; 
-        this.attack = attack;
+        this.damage = damage;
 
         this.x = spawnX;
         this.y = spawnY;
@@ -41,7 +41,7 @@ class Entity {
     }
 
     attack(other) {
-        other.health -= this.attack;
+        other.health -= this.damage;
     }
 
     isValidAction(action) {
@@ -60,6 +60,15 @@ class Entity {
                 this.move(-1, 0);
             } else if (action == ATTACK) {
                 // Attack the enemy in this position
+                if (this.env.numEntities[this.x][this.y] > 1) {
+                    for (var enemyId in this.env.enemies) {
+                        var enemy = this.env.enemies[enemyId];
+                        if (enemy.x  == this.x && enemy.y == this.y) {
+                            this.attack(enemy);
+                            break;
+                        }
+                    }
+                }
             }
         } else {
             console.log("Invalid action, must be one of: ", this.validActions);
@@ -71,13 +80,20 @@ class Player extends Entity {
     constructor(env, spawnX, spawnY) {
         super(env, 50, 1, spawnX, spawnY);
     }
+
+    act(action) {
+        super.act(action);
+        this.health -= 1;
+    }
 }
 
 class Enemy extends Entity {
-    constructor(env, spawnX, spawnY) {
+    constructor(env, spawnX, spawnY, id) {
         // var hp = _.random(1, 10);
         // var attack = _.random(1, 5);
-        super(env, 5, 2, spawnX, spawnY);
+        super(env, 1, 2, spawnX, spawnY);
+        this.id = id;
+        this.deathTrigger = false;
     }
 
     move(dx, dy) {
@@ -87,10 +103,22 @@ class Enemy extends Entity {
         }
     }
 
+    isDead() {
+        return this.health <= 0;
+    }
+
     act() {
-        super.act(_.random(this.validActions.length - 1));
-        if (this.env.player.x == this.x && this.env.player.y == this.y) {
-            super.attack(this.env.player);
+        if (!this.isDead()) {
+            super.act(_.random(this.validActions.length - 1));
+            if (this.env.player.x == this.x && this.env.player.y == this.y) {
+                super.attack(this.env.player);
+            }
+        } else if (!this.deathTrigger) {
+            this.env.numEntities[this.x][this.y] -= 1; 
+            this.x = -1;
+            this.y = -1;
+            this.env.numEnemies -= 1;
+            this.deathTrigger = true;
         }
     }
 }

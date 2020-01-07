@@ -74,7 +74,7 @@ class Environment {
         _.each(enemySpawns, (el, idx, list) => {
             var enemyX = Math.floor(el / height);
             var enemyY = el % height;
-            this.enemies.push(new Enemy(this, enemyX, enemyY));
+            this.enemies[idx] = new Enemy(this, enemyX, enemyY, idx);
         });
 
         // TODO: define observation space
@@ -86,10 +86,12 @@ class Environment {
         gameState[this.player.y][this.player.x] = "P";
 
         _.each(this.enemies, (enemy, idx, list) => {
-            if (gameState[enemy.y][enemy.x] != "_") {
-                gameState[enemy.y][enemy.x] += "/E";
-            } else {
-                gameState[enemy.y][enemy.x] = "E";
+            if (!enemy.isDead()) {
+                if (gameState[enemy.y][enemy.x] != "_") {
+                    gameState[enemy.y][enemy.x] += "/E";
+                } else {
+                    gameState[enemy.y][enemy.x] = "E";
+                }
             }
         });
 
@@ -101,7 +103,7 @@ class Environment {
             gameStateStr += "</br>";
         }
 
-        gameStateStr += "</br>" + this.player.health;
+        gameStateStr += "</br>HP: " + this.player.health + " " + "NUM ENEMIES: " + this.numEnemies;
         $("#gameText").html(gameStateStr);
     }
 
@@ -111,6 +113,16 @@ class Environment {
         _.each(this.enemies, (enemy, idx, list) => {
             enemy.act();
         });
+        var output = {};
+        var obs, reward, done;
+        if (this.player.health <= 0) {
+            output.done = true;
+        } else {
+            output.done = false;
+        }
+        output.reward = 0;
+        output.obs = [0, 0, 0];
+        return output;
     }
 
     getObservation() {

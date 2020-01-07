@@ -6,23 +6,32 @@ function main() {
     // ctx.fillRect(0, 0, 150, 75);
 
     // Create the game environment
-    var env = new Environment(11, 11, 10);
-    canvas.width = env.width * 50;
-    canvas.height = env.height * 50;
-    env.draw(ctx);
+
 
     var translate = ['UP', 'RIGHT', 'DOWN', 'LEFT', 'ATTACK'];
-    
-    var interval = setInterval(() => {
-        console.log(env.model);
-        var playerAction = _.random(0, 4);
-        console.log(translate[playerAction]);
-        var output = env.step(playerAction);
-        env.draw(ctx);
-        if (output.done) {
+    var interval = null;
+
+    $("#start").click((e) => {
+        if (interval != null) {
             clearInterval(interval);
         }
-    }, 100);
+
+        var env = new Environment(11, 11, 10);
+        canvas.width = env.width * 50;
+        canvas.height = env.height * 50;
+        env.draw(ctx);
+
+        interval = setInterval(() => {
+            console.log(env.model);
+            var playerAction = _.random(0, 4);
+            console.log(translate[playerAction]);
+            var output = env.step(playerAction);
+            env.draw(ctx);
+            if (output.done) {
+                clearInterval(interval);
+            }
+        }, 100);
+    });
 }
 
 main();

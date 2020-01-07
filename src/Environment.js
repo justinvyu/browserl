@@ -1,5 +1,10 @@
 VALID_ENTRIES = ['Player', 'Enemy', 'Pellet'];
 
+GREEN = "#2ecc71";
+RED = "#e74c3c";
+DARK = "#2f3542";
+LIGHT = "#ecf0f1";
+
 class Space {
     constructor() {
         this.contents = {
@@ -94,33 +99,92 @@ class Environment {
         });
 
         this.pellets = {};
+        this.graphics = true;
 
         // TODO: define observation space
         // TODO: define action space
     }
 
-    draw() {
-        var gameState = [...Array(this.width)].map(x => Array(this.height).fill("_"));
-        gameState[this.player.y][this.player.x] = "P";
+    draw(ctx) {
+        var gameStateStr = "";
+        if (this.graphics) {
+            if (ctx == undefined) {
+                console.log("Canvas context is undefined, please pass it into the draw method");
+            } else {
+                var squareSize = 50;
+                var canvasWidth = squareSize * this.width;
+                var canvasHeight = squareSize * this.height;
 
-        _.each(this.enemies, (enemy, idx, list) => {
-            if (!enemy.isDead()) {
-                if (gameState[enemy.y][enemy.x] != "_") {
-                    gameState[enemy.y][enemy.x] += "/E";
-                } else {
-                    gameState[enemy.y][enemy.x] = "E";
+                // ctx.fillStyle = "black";
+                // ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+                ctx.strokeStyle = LIGHT;
+                ctx.lineWidth = 2;
+
+                for (var x = 0; x < this.width; x += 1) {
+                    for (var y = 0; y < this.height; y += 1) {
+                        ctx.strokeRect(x * squareSize,
+                                    y * squareSize,
+                                    squareSize,
+                                    squareSize);
+                        var space = this.model[x][y];
+                        if (space.atCapacity()) {
+                            ctx.fillStyle = GREEN;
+                            ctx.fillRect(x * squareSize,
+                                         y * squareSize,
+                                         squareSize / 2,
+                                         squareSize / 2);
+                            ctx.fillStyle = RED;
+                            ctx.fillRect((x + 0.5) * squareSize,
+                                         (y + 0.5) * squareSize,
+                                         squareSize / 2,
+                                         squareSize / 2);
+                            ctx.fillStyle = DARK;
+                            ctx.fillRect((x + 0.5) * squareSize,
+                                        y * squareSize,
+                                        squareSize / 2,
+                                        squareSize / 2);
+                            ctx.fillRect(x * squareSize,
+                                        (y + 0.5) * squareSize,
+                                        squareSize / 2,
+                                        squareSize / 2);
+                            continue;
+                        } else if (space.containsPlayer()) {
+                            ctx.fillStyle = GREEN;
+                        } else if (space.containsEnemy()) {
+                            ctx.fillStyle = RED;
+                        } else if (space.containsPellet()) {
+                            ctx.fillStyle = DARK;
+                        } else {
+                            ctx.fillStyle = DARK;
+                        }
+                        ctx.fillRect(x * squareSize,
+                                     y * squareSize,
+                                     squareSize,
+                                     squareSize);
+                    }
                 }
             }
-        });
+        } else {
+            var gameState = [...Array(this.width)].map(x => Array(this.height).fill("_"));
+            gameState[this.player.y][this.player.x] = "P";
 
-        var gameStateStr = "";
-        for (var y = 0; y < this.height; y += 1) {
-            for (var x = 0; x < this.width; x += 1) {
-                gameStateStr += gameState[y][x] + " ";
+            _.each(this.enemies, (enemy, idx, list) => {
+                if (!enemy.isDead()) {
+                    if (gameState[enemy.y][enemy.x] != "_") {
+                        gameState[enemy.y][enemy.x] += "/E";
+                    } else {
+                        gameState[enemy.y][enemy.x] = "E";
+                    }
+                }
+            });
+
+            for (var y = 0; y < this.height; y += 1) {
+                for (var x = 0; x < this.width; x += 1) {
+                    gameStateStr += gameState[y][x] + " ";
+                }
+                gameStateStr += "</br>";
             }
-            gameStateStr += "</br>";
         }
-
         gameStateStr += "</br>HP: " + this.player.health + " " + "NUM ENEMIES: " + this.numEnemies;
         $("#gameText").html(gameStateStr);
     }

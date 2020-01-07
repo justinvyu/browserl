@@ -38,7 +38,6 @@ class Entity {
         var loc = this.getPotentialLocation(dx, dy);
         this.x = loc[0];
         this.y = loc[1];
-        this.env.numEntities[this.x][this.y] += 1;
         this.env.model[this.x][this.y].add(this);
     }
 

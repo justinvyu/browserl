@@ -7,7 +7,9 @@ var ATTACK = 4;
 class Entity {
     constructor(env, hp, damage, spawnX, spawnY) {
         this.env = env
-        this.health = hp; 
+        this._health = hp;
+        this.maxHealth = hp;
+
         this.damage = damage;
 
         this.x = spawnX;
@@ -16,6 +18,14 @@ class Entity {
         this.env.model[this.x][this.y].add(this);
 
         this.validActions = [UP, RIGHT, DOWN, LEFT, ATTACK];
+    }
+
+    get health() {
+        return this._health;
+    }
+
+    set health(value) {
+        this._health = Math.min(this.maxHealth, value);
     }
 
     getPotentialLocation(dx, dy) {
@@ -45,6 +55,10 @@ class Entity {
         other.health -= this.damage;
     }
 
+    eat(pellet) {
+        pellet.actOn(this);
+    }
+    
     isValidAction(action) {
         return this.validActions.includes(action);
     }
@@ -81,7 +95,11 @@ class Player extends Entity {
         } else {
             super.act(action);
         }
-        this.health -= 1;
+        if (this.env.model[this.x][this.y].containsPellet()) {
+            super.eat(this.env.model[this.x][this.y].getPellet());
+        } else {
+            this.health -= 1;
+        }
     }
 }
 
@@ -110,6 +128,9 @@ class Enemy extends Entity {
             super.act(_.random(this.validActions.length - 1));
             if (this.env.player.x == this.x && this.env.player.y == this.y) {
                 super.attack(this.env.player);
+            }
+            if (this.env.model[this.x][this.y].containsPellet()) {
+                super.eat(this.env.model[this.x][this.y].getPellet());
             }
         } else if (!this.deathTrigger) {
             this.env.model[this.x][this.y].remove(this);

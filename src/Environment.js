@@ -85,10 +85,8 @@ class Environment {
                 this.model[x].push(new Space());
             }
         }
-        // this.model = [...Array(height)].map(x => Array(width).fill(new Space()));
 
         // Initialize the player into the environment
-        // this.model[Math.floor(size / 2)][Math.floor(size / 2)] = "P";
         var midX = Math.floor(width / 2);
         var midY = Math.floor(height / 2);
         this.player = new Player(this, midX, midY);
@@ -102,7 +100,8 @@ class Environment {
             this.enemies[idx] = new Enemy(this, enemyX, enemyY, idx);
         });
 
-        this.pellets = [];
+        this.pellets = {};
+        this.pelletId = 0;
         this.graphics = true;
         this.squareSize = 50;
 
@@ -142,15 +141,6 @@ class Environment {
                 for (var x = 0; x < this.width; x += 1) {
                     for (var y = 0; y < this.height; y += 1) {
                         var space = this.model[x][y];
-
-                        // var offset = 5;
-                        // if (space.containsPellet()) {
-                        //     ctx.strokeStyle = YELLOW;
-                        //     ctx.lineWidth = 4;
-                        // } else {
-                        //     ctx.strokeStyle = LIGHT;
-                        //     ctx.lineWidth = 2;
-                        // }
                         ctx.strokeRect(x * squareSize,
                                     y * squareSize,
                                     squareSize,
@@ -212,7 +202,7 @@ class Environment {
                 gameStateStr += "</br>";
             }
         }
-        gameStateStr += "</br>HP: " + this.player.health + " " + "NUM ENEMIES: " + this.numEnemies;
+        gameStateStr += "</br>NUM ENEMIES: " + this.numEnemies;
         $("#gameText").html(gameStateStr);
     }
 
@@ -232,13 +222,14 @@ class Environment {
 
     spawnPellets() {
         // Spawn pellet
-        var numPelletsToSpawn = _.random(0, 1);
+        var numPelletsToSpawn = _.random(0, 2);
         var pelletSpawns = _.sample(_.range(this.width * this.height), numPelletsToSpawn);
         _.each(pelletSpawns, (spawnLoc, idx, list) => {
             var pelletX = Math.floor(spawnLoc / this.height);
             var pelletY = spawnLoc % this.height;
             if (this.model[pelletX][pelletY].isEmpty()) {
-                this.pellets.push(new Pellet(this, pelletX, pelletY));
+                this.pellets[this.pelletId] = new Pellet(this, pelletX, pelletY, this.pelletId);
+                this.pelletId += 1;
             }
         });
     }

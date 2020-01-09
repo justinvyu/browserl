@@ -8,6 +8,8 @@ DARKRED = "#440e08";
 DARK = "#2f3542";
 LIGHT = "#ecf0f1";
 YELLOW = "#f1c40f";
+PURPLE = "#9b59b6";
+BLUE = "#3498db";
 
 class Space {
     constructor() {
@@ -20,12 +22,15 @@ class Space {
     add(entity) {
         // Returns True if successfully added, false if an invalid entity passed in
         // or if there already exists an entity of that type
+        var className = entity.constructor.name;
+        if (className.includes("Pellet")) {
+            className = "Pellet";
+        }
         if (typeof(entity) != "object" || 
-            !VALID_ENTRIES.includes(entity.constructor.name)) {
+            !(entity instanceof Entity || entity instanceof Pellet)) {
             console.log("Must pass in an object of the type Player, Enemy, or Pellet");
             return false;
         }
-        var className = entity.constructor.name;
         if (this.contents[className] != null) {
             console.log(className + " already exists in this space");
             return false;
@@ -36,12 +41,15 @@ class Space {
     remove(entity) {
         // Returns True if successfully removed, false if an invalid entity passed in
         // or if there does not exist an entity of that type
+        var className = entity.constructor.name;
+        if (className.includes("Pellet")) {
+            className = "Pellet";
+        }
         if (typeof(entity) != "object" || 
-            !VALID_ENTRIES.includes(entity.constructor.name)) {
+            !(entity instanceof Entity || entity instanceof Pellet)) {
             console.log("Must pass in an object of the type Player, Enemy, or Pellet");
             return false;
         }
-        var className = entity.constructor.name;
         if (this.contents[className] == null) {
             console.log(className + " does not exist in this space");
             return false;
@@ -61,10 +69,7 @@ class Space {
         return this.containsPlayer() && this.containsEnemy();
     }
     isEmpty() {
-        return (
-            this.contents.player == null &&
-            this.contents.enemy == null &&
-            this.contents.pellet == null);
+        return !this.containsPlayer() && !this.containsEnemy() && !this.containsPellet();
     }
 }
 
@@ -173,7 +178,14 @@ class Environment {
                             this.drawSquare(ctx, x, y, RED);
                             this.drawText(ctx, x, y, space.getEnemy().health, DARKRED);
                         } else if (space.containsPellet()) {
-                            this.drawSquare(ctx, x, y, YELLOW);
+                            var pellet = space.getPellet();
+                            if (pellet instanceof AttackPellet) {
+                                this.drawSquare(ctx, x, y, PURPLE);
+                            } else if(pellet instanceof HealthPellet) {
+                                this.drawSquare(ctx, x, y, BLUE);
+                            } else {
+                                this.drawSquare(ctx, x, y, YELLOW);
+                            }
                         } else {
                             this.drawSquare(ctx, x, y, DARK);
                         }
@@ -221,14 +233,22 @@ class Environment {
     }
 
     spawnPellets() {
-        // Spawn pellet
         var numPelletsToSpawn = _.random(0, 2);
         var pelletSpawns = _.sample(_.range(this.width * this.height), numPelletsToSpawn);
         _.each(pelletSpawns, (spawnLoc, idx, list) => {
             var pelletX = Math.floor(spawnLoc / this.height);
             var pelletY = spawnLoc % this.height;
             if (this.model[pelletX][pelletY].isEmpty()) {
-                this.pellets[this.pelletId] = new Pellet(this, pelletX, pelletY, this.pelletId);
+                var rand = _.random(0, 99);
+                var pellet;
+                if (rand < 10) {  // 10% chance for AttackPellet
+                    pellet = new AttackPellet(this, pelletX, pelletY, this.pelletId);
+                } else if (rand < 20) {  // 10% chance for HealthPellet
+                    pellet = new HealthPellet(this, pelletX, pelletY, this.pelletId);
+                } else {  // 80% chance for regular Pellet
+                    pellet = new Pellet(this, pelletX, pelletY, this.pelletId);
+                }
+                this.pellets[this.pelletId] = pellet;
                 this.pelletId += 1;
             }
         });

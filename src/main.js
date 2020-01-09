@@ -1,4 +1,3 @@
-
 function main() {
     var canvas = document.getElementById("game");
     var ctx = canvas.getContext("2d");
@@ -6,9 +5,9 @@ function main() {
     var translate = ['UP', 'RIGHT', 'DOWN', 'LEFT', 'ATTACK'];
     var interval = null;
 
-    var width = 7;
-    var height = 7;
-    var numEnemies = 5;
+    var width = 13;
+    var height = 13;
+    var numEnemies = 15;
 
     $("#start").click((e) => {
         if (interval != null) {
@@ -21,16 +20,18 @@ function main() {
         env.draw(ctx);
 
         interval = setInterval(() => {
-            console.log(env.model);
             var playerAction = _.random(0, 4);
-            console.log(translate[playerAction]);
+            // console.log(translate[playerAction]);
             var output = env.step(playerAction);
+            console.log("# pellets: " + Object.keys(env.pellets).length);
             env.draw(ctx);
             if (output.done) {
                 clearInterval(interval);
             }
-        }, 100);
+        }, 50);
     });
 }
 
 main();
+
+var testEnv = new Environment(7, 7, 5);

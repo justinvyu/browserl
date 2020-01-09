@@ -9,9 +9,37 @@ class Pellet {
         this.env.model[this.x][this.y].add(this);
     }
 
+    despawn() {
+        this.env.model[this.x][this.y].remove(this);
+        // console.log("before deleting: " + Object.keys(this.env.pellets).length);
+        delete this.env.pellets[this.id];
+        // console.log("after deleting: " + Object.keys(this.env.pellets).length);
+    }
+
     actOn(entity) {
         entity.health += 5;
-        this.env.model[this.x][this.y].remove(this);
-        delete this.env.pellets[this.id];
+        this.despawn();
+    }
+}
+
+class AttackPellet extends Pellet {
+    constructor(env, spawnX, spawnY, id) {
+        super(env, spawnX, spawnY, id);
+    }
+
+    actOn(entity) {
+        entity.damage += 1;
+        super.actOn(entity);
+    }
+}
+
+class HealthPellet extends Pellet {
+    constructor(env, spawnX, spawnY, id) {
+        super(env, spawnX, spawnY, id);
+    }
+
+    actOn(entity) {
+        entity._health += 10;  // Ignores the health cap (overhealing)
+        super.despawn();
     }
 }

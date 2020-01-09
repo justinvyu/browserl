@@ -1,9 +1,13 @@
 VALID_ENTRIES = ['Player', 'Enemy', 'Pellet'];
 
+/* === COLORS === */
 GREEN = "#2ecc71";
+DARKGREEN = "#0d3a20";
 RED = "#e74c3c";
+DARKRED = "#440e08";
 DARK = "#2f3542";
 LIGHT = "#ecf0f1";
+YELLOW = "#f1c40f";
 
 class Space {
     constructor() {
@@ -98,11 +102,27 @@ class Environment {
             this.enemies[idx] = new Enemy(this, enemyX, enemyY, idx);
         });
 
-        this.pellets = {};
+        this.pellets = [];
         this.graphics = true;
+        this.squareSize = 50;
 
         // TODO: define observation space
         // TODO: define action space
+    }
+
+    drawSquare(ctx, x, y, color) {
+        ctx.fillStyle = color;
+        ctx.fillRect(x * this.squareSize,
+                     y * this.squareSize,
+                     this.squareSize,
+                     this.squareSize);
+    }
+
+    drawText(ctx, x, y, str, color) {
+        ctx.fillStyle = color;
+        ctx.fillText(String(str),
+                     (x + 0.5) * this.squareSize,
+                     (y + 0.7) * this.squareSize);
     }
 
     draw(ctx) {
@@ -111,22 +131,30 @@ class Environment {
             if (ctx == undefined) {
                 console.log("Canvas context is undefined, please pass it into the draw method");
             } else {
-                var squareSize = 50;
-                var canvasWidth = squareSize * this.width;
-                var canvasHeight = squareSize * this.height;
+                var squareSize = this.squareSize;
 
-                // ctx.fillStyle = "black";
-                // ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+                ctx.font = "25px Helvetica";
+                ctx.textAlign = "center";
                 ctx.strokeStyle = LIGHT;
                 ctx.lineWidth = 2;
 
+                ctx.save();
                 for (var x = 0; x < this.width; x += 1) {
                     for (var y = 0; y < this.height; y += 1) {
+                        var space = this.model[x][y];
+
+                        // var offset = 5;
+                        // if (space.containsPellet()) {
+                        //     ctx.strokeStyle = YELLOW;
+                        //     ctx.lineWidth = 4;
+                        // } else {
+                        //     ctx.strokeStyle = LIGHT;
+                        //     ctx.lineWidth = 2;
+                        // }
                         ctx.strokeRect(x * squareSize,
                                     y * squareSize,
                                     squareSize,
                                     squareSize);
-                        var space = this.model[x][y];
                         if (space.atCapacity()) {
                             ctx.fillStyle = GREEN;
                             ctx.fillRect(x * squareSize,
@@ -149,20 +177,19 @@ class Environment {
                                         squareSize / 2);
                             continue;
                         } else if (space.containsPlayer()) {
-                            ctx.fillStyle = GREEN;
+                            this.drawSquare(ctx, x, y, GREEN);
+                            this.drawText(ctx, x, y, space.getPlayer().health, DARKGREEN);
                         } else if (space.containsEnemy()) {
-                            ctx.fillStyle = RED;
+                            this.drawSquare(ctx, x, y, RED);
+                            this.drawText(ctx, x, y, space.getEnemy().health, DARKRED);
                         } else if (space.containsPellet()) {
-                            ctx.fillStyle = DARK;
+                            this.drawSquare(ctx, x, y, YELLOW);
                         } else {
-                            ctx.fillStyle = DARK;
+                            this.drawSquare(ctx, x, y, DARK);
                         }
-                        ctx.fillRect(x * squareSize,
-                                     y * squareSize,
-                                     squareSize,
-                                     squareSize);
                     }
                 }
+                ctx.restore();
             }
         } else {
             var gameState = [...Array(this.width)].map(x => Array(this.height).fill("_"));
@@ -205,12 +232,15 @@ class Environment {
 
     spawnPellets() {
         // Spawn pellet
-        // var numPelletsToSpawn = _.random(0, 3);
-        // var pelletSpawns = _.sample(_.range(this.width * this.height), numPelletsToSpawn);
-        // _.each(pelletSpawns, (spawnLoc, idx, list) => {
-        //     var enemyX = Math.floor(spawnLoc / this.height);
-        //     var enemyY = spawnLoc % this.height;
-        // });
+        var numPelletsToSpawn = _.random(0, 1);
+        var pelletSpawns = _.sample(_.range(this.width * this.height), numPelletsToSpawn);
+        _.each(pelletSpawns, (spawnLoc, idx, list) => {
+            var pelletX = Math.floor(spawnLoc / this.height);
+            var pelletY = spawnLoc % this.height;
+            if (this.model[pelletX][pelletY].isEmpty()) {
+                this.pellets.push(new Pellet(this, pelletX, pelletY));
+            }
+        });
     }
 
     step(action) {

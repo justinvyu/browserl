@@ -5,9 +5,6 @@ function main() {
     // ctx.fillStyle = "#FF0000";
     // ctx.fillRect(0, 0, 150, 75);
 
-    // Create the game environment
-
-
     var translate = ['UP', 'RIGHT', 'DOWN', 'LEFT', 'ATTACK'];
     var interval = null;
 

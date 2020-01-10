@@ -7,13 +7,16 @@
 </head>
 <body> 
     <!-- Game Canvas -->
-    <canvas id="game"></canvas>
-    <p id="gameText"></p>
-
-    <input id="width-input" type="text" placeholder="width" value="11"></input>
-    <input id="height-input" type="text" placeholder="height" value="11"></input>
-    <input id="num-enemies-input" type="text" placeholder="number of enemies" value="15"></input>
-    <button id="start">Start</button>
+    <div class="container">
+        <canvas id="game"></canvas>
+        <div id="menu">
+            <p id="gameText"></p>
+            <input id="width-input" type="text" placeholder="width" value="11"></input>
+            <input id="height-input" type="text" placeholder="height" value="11"></input>
+            <input id="num-enemies-input" type="text" placeholder="number of enemies" value="15"></input>
+            <button id="start">Start</button>
+        </div>
+    </div>
 
     <!-- JQuery -->
     <script

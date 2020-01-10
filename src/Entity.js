@@ -16,7 +16,7 @@ class Entity {
         this.y = spawnY;
 
         this.env.model[this.x][this.y].add(this);
-        this.validActions = [UP, RIGHT, DOWN, LEFT];
+        this.validActions = [UP, RIGHT, DOWN, LEFT, ATTACK];
     }
 
     get health() {

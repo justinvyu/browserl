@@ -99,19 +99,19 @@ class Environment {
         this.reset();
     }
 
-    drawSquare(ctx, x, y, color) {
+    drawSquare(ctx, x, y, color, width = this.squareSize, height = this.squareSize) {
         ctx.fillStyle = color;
         ctx.fillRect(x * this.squareSize,
                      y * this.squareSize,
-                     this.squareSize,
-                     this.squareSize);
+                     width, height);
     }
 
-    drawText(ctx, x, y, str, color) {
+    drawText(ctx, x, y, str, color, font = "25px Helvetica", offsetX = 0.5 * this.squareSize, offsetY = 0.7 * this.squareSize) {
+        ctx.font = font;
         ctx.fillStyle = color;
         ctx.fillText(String(str),
-                     (x + 0.5) * this.squareSize,
-                     (y + 0.7) * this.squareSize);
+                     (x * this.squareSize + offsetX),
+                     (y * this.squareSize + offsetY));
     }
 
     render(ctx) {
@@ -122,7 +122,6 @@ class Environment {
             } else {
                 var squareSize = this.squareSize;
 
-                ctx.font = "25px Helvetica";
                 ctx.textAlign = "center";
                 ctx.strokeStyle = LIGHT;
                 ctx.lineWidth = 2;
@@ -131,31 +130,22 @@ class Environment {
                 for (var x = 0; x < this.width; x += 1) {
                     for (var y = 0; y < this.height; y += 1) {
                         var space = this.model[x][y];
+
+                        // Draw the border
                         ctx.strokeRect(x * squareSize,
                                     y * squareSize,
                                     squareSize,
                                     squareSize);
-                        if (space.atCapacity()) {
-                            ctx.fillStyle = GREEN;
-                            ctx.fillRect(x * squareSize,
-                                         y * squareSize,
-                                         squareSize / 2,
-                                         squareSize / 2);
-                            ctx.fillStyle = RED;
-                            ctx.fillRect((x + 0.5) * squareSize,
-                                         (y + 0.5) * squareSize,
-                                         squareSize / 2,
-                                         squareSize / 2);
-                            ctx.fillStyle = DARK;
-                            ctx.fillRect((x + 0.5) * squareSize,
-                                        y * squareSize,
-                                        squareSize / 2,
-                                        squareSize / 2);
-                            ctx.fillRect(x * squareSize,
-                                        (y + 0.5) * squareSize,
-                                        squareSize / 2,
-                                        squareSize / 2);
-                            continue;
+
+                        if (space.containsPlayer() && space.containsEnemy()) {
+                            this.drawSquare(ctx, x, y, GREEN, squareSize / 2, squareSize / 2);
+                            this.drawSquare(ctx, x + 0.5, y + 0.5, RED, squareSize / 2, squareSize / 2);
+                            this.drawSquare(ctx, x + 0.5, y, DARK, squareSize / 2, squareSize / 2);
+                            this.drawSquare(ctx, x, y + 0.5, DARK, squareSize / 2, squareSize / 2);
+                            this.drawText(ctx, x, y, space.getPlayer().health, DARKGREEN,
+                                          "16px Helvetica", squareSize / 4, squareSize / 3);
+                            this.drawText(ctx, x + 0.5, y + 0.5, space.getEnemy().health, DARKRED,
+                                          "16px Helvetica", squareSize / 4, squareSize / 3);
                         } else if (space.containsPlayer()) {
                             this.drawSquare(ctx, x, y, GREEN);
                             this.drawText(ctx, x, y, space.getPlayer().health, DARKGREEN);

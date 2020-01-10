@@ -24,7 +24,11 @@ class Entity {
     }
 
     set health(value) {
-        this._health = Math.max(Math.min(this.maxHealth, value), 0);
+        if (this._health > this.maxHealth && value < this._health) {
+            this._health = value;
+        } else {
+            this._health = Math.max(Math.min(this.maxHealth, value), 0);
+        }
     }
 
     getHealth() {

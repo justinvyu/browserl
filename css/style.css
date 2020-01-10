@@ -26,8 +26,12 @@ html, body {
     padding: 2rem;
 }
 
-input {
+input[type="text"] {
     width: 6rem;
     margin: 0 0.25rem;
     text-align: center;
+}
+
+input[type="checkbox"] {
+    margin: 0 0.25rem;
 }

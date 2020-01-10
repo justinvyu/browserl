@@ -66,8 +66,17 @@ class Entity {
         this.env.model[this.x][this.y].add(this);
     }
 
+    isDead() {
+        return this.health <= 0;
+    }
+
+    /**
+     * Returns true if other entity dies from the attack, false otherwise.
+     * @param {Entity} other 
+     */
     attack(other) {
         other.health -= this.damage;
+        return other.isDead();
     }
 
     eat(pellet) {
@@ -98,18 +107,19 @@ class Entity {
 class Player extends Entity {
     constructor(env, spawnX, spawnY, fov = 2) {
         super(env, 50, 1, spawnX, spawnY);
-        this.validActions.push(ATTACK);
         this.fov = fov;  // Number of squares away that can be seen, centered at the player
+        this.killedEnemy = false;  // Indicator if the player killed an enemy this turn.
     }
 
     act(action) {
         if (action == ATTACK) {
             // Attack the enemy in this position
             if (this.env.model[this.x][this.y].containsEnemy()) {
-                this.attack(this.env.model[this.x][this.y].getEnemy());
+                this.killedEnemy = this.attack(this.env.model[this.x][this.y].getEnemy());
             }
         } else {
             super.act(action);
+            this.killedEnemy = false;
         }
         if (this.env.model[this.x][this.y].containsPellet()) {
             super.eat(this.env.model[this.x][this.y].getPellet());
@@ -133,12 +143,8 @@ class Enemy extends Entity {
         }
     }
 
-    isDead() {
-        return this.health <= 0;
-    }
-
     act() {
-        if (!this.isDead()) {
+        if (!super.isDead()) {
             super.act(_.random(this.validActions.length - 1));
             if (this.env.player.x == this.x && this.env.player.y == this.y) {
                 super.attack(this.env.player);

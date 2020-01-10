@@ -255,8 +255,16 @@ class Environment {
     }
 
     getReward() {
-        // TODO
-        return 0;
+        var reward;
+        if (this.player.isDead()) {
+            reward = -100;
+        } else if (this.player.killedEnemy) {
+            reward = 5;
+        } else {
+            reward = 1;
+        }
+        this.score += reward;
+        return reward;
     }
 
     getGameState() {

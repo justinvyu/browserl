@@ -16,8 +16,7 @@ class Entity {
         this.y = spawnY;
 
         this.env.model[this.x][this.y].add(this);
-
-        this.validActions = [UP, RIGHT, DOWN, LEFT, ATTACK];
+        this.validActions = [UP, RIGHT, DOWN, LEFT];
     }
 
     get health() {
@@ -26,6 +25,21 @@ class Entity {
 
     set health(value) {
         this._health = Math.min(this.maxHealth, value);
+    }
+
+    getHealth() {
+        return this.health;
+    }
+
+    getDamage() {
+        return this.damage;
+    }
+
+    getVision() {
+        return this.env.encodeGrid(this.x - this.fov,
+                                   this.y - this.fov,
+                                   this.x + this.fov,
+                                   this.y + this.fov);
     }
 
     getPotentialLocation(dx, dy) {
@@ -44,6 +58,7 @@ class Entity {
     }
 
     move(dx, dy) {
+        // TODO: Fix this to not allow 2 entities to move into the same square
         this.env.model[this.x][this.y].remove(this);
         var loc = this.getPotentialLocation(dx, dy);
         this.x = loc[0];
@@ -81,9 +96,10 @@ class Entity {
 }
 
 class Player extends Entity {
-    constructor(env, spawnX, spawnY) {
+    constructor(env, spawnX, spawnY, fov = 2) {
         super(env, 50, 1, spawnX, spawnY);
         this.validActions.push(ATTACK);
+        this.fov = fov;  // Number of squares away that can be seen, centered at the player
     }
 
     act(action) {
@@ -105,8 +121,6 @@ class Player extends Entity {
 
 class Enemy extends Entity {
     constructor(env, spawnX, spawnY, id) {
-        // var hp = _.random(1, 10);
-        // var attack = _.random(1, 5);
         super(env, 1, 2, spawnX, spawnY);
         this.id = id;
         this.deathTrigger = false;

@@ -11,6 +11,16 @@ YELLOW = "#f1c40f";
 PURPLE = "#9b59b6";
 BLUE = "#3498db";
 
+GRID_ENCODE_LOOKUP = {
+    'Invalid': -1,
+    'Empty': 0,
+    'Player': 1,
+    'Enemy': 2,
+    'Pellet': 3,
+    'AttackPellet': 4,
+    'HealthPellet': 5,
+}
+
 class Space {
     constructor() {
         this.contents = {
@@ -19,6 +29,7 @@ class Space {
             'Pellet': null,
         };
     }
+
     add(entity) {
         // Returns True if successfully added, false if an invalid entity passed in
         // or if there already exists an entity of that type
@@ -38,6 +49,7 @@ class Space {
         this.contents[className] = entity;
         return true;
     }
+
     remove(entity) {
         // Returns True if successfully removed, false if an invalid entity passed in
         // or if there does not exist an entity of that type
@@ -64,23 +76,23 @@ class Space {
     containsPlayer() { return this.contents['Player'] != null }
     containsEnemy() { return this.contents['Enemy'] != null; }
     containsPellet() { return this.contents['Pellet'] != null; }
-
-    atCapacity() {
-        return this.containsPlayer() && this.containsEnemy();
-    }
+    atCapacity() { return this.containsPlayer() && this.containsEnemy(); }
     isEmpty() {
         return !this.containsPlayer() && !this.containsEnemy() && !this.containsPellet();
     }
 }
 
 class Environment {
-    constructor(width, height, numEnemies) {
+    constructor(width, height, numEnemies,
+                observationKeys = ["vision", "health", "damage"],
+                graphics = true) {
         this.width = width;
         this.height = height;
 
         // this.numPlayers = numPlayers;
         this.numEnemies = numEnemies;
         this.clock = 0; // Game clock;
+        this.score = 0;
 
         // Initialize the environment model
         this.model = [];
@@ -107,11 +119,22 @@ class Environment {
 
         this.pellets = {};
         this.pelletId = 0;
-        this.graphics = true;
+        this.graphics = graphics;
         this.squareSize = 50;
 
-        // TODO: define observation space
-        // TODO: define action space
+        this.observationSpace = {
+            'vision': Math.pow(2 * this.player.fov + 1, 2),
+            'health': 1,
+            'damage': 1,
+        }
+        this.observationLookup = {
+            'vision': () => { return this.player.getVision(); },
+            'health': () => { return this.player.getHealth(); },
+            'damage': () => { return this.player.getDamage(); },
+        }
+        // This determines which observation keys are concatenated together when calling `getObservation`
+        this.observationKeys = observationKeys;
+        this.actionSpace = this.player.validActions.length;
     }
 
     drawSquare(ctx, x, y, color) {
@@ -129,7 +152,7 @@ class Environment {
                      (y + 0.7) * this.squareSize);
     }
 
-    draw(ctx) {
+    render(ctx) {
         var gameStateStr = "";
         if (this.graphics) {
             if (ctx == undefined) {
@@ -219,17 +242,72 @@ class Environment {
     }
 
     getObservation() {
-        // Returns obs, reward, done
-        var output = {};
-        var obs, reward, done;
-        if (this.player.health <= 0) {
-            output.done = true;
-        } else {
-            output.done = false;
+        var obs = [];
+        _.each(this.observationKeys, (key, idx, list) => {
+            obs = obs.concat(this.observationLookup[key]());
+        });
+        return obs;
+    }
+
+    encodeSquare(x, y) {
+        if (x < 0 || y < 0 || x >= this.width || y >= this.height) {
+            return GRID_ENCODE_LOOKUP["Invalid"];
         }
-        output.reward = 0;
-        output.obs = [0, 0, 0];
-        return output;
+        var space = this.model[x][y];
+        if (space.isEmpty()) {
+            return GRID_ENCODE_LOOKUP["Empty"];
+        }
+
+        var encoding = 0;
+        if (space.containsPlayer()) {
+            encoding = encoding * 10 + GRID_ENCODE_LOOKUP["Player"];
+        }
+        if (space.containsEnemy()) {
+            encoding = encoding * 10 + GRID_ENCODE_LOOKUP["Enemy"];
+        }
+        if (space.containsPellet()) {
+            encoding = encoding * 10 + GRID_ENCODE_LOOKUP[space.getPellet().constructor.name];
+        }
+        return encoding;
+    }
+
+    encodeGrid(tl_x, tl_y, br_x, br_y, flattened = true) {
+        if (tl_x >= br_x || tl_y >= br_y) {
+            console.log("INVALID TOP LEFT AND BOTTOM RIGHT COORDINATES");
+            return [];
+        }
+        var encoded = [];
+        for (var y = tl_y; y <= br_y; y += 1) {
+            if (!flattened) {
+                encoded.push([]);
+            }
+            for (var x = tl_x; x <= br_x; x += 1) {
+                if (!flattened) {
+                    encoded[encoded.length - 1].push(this.encodeSquare(x, y));
+                } else {
+                    encoded.push(this.encodeSquare(x, y));
+                }
+            }
+        }
+        return encoded;
+    }
+
+    getReward() {
+        return 0;
+    }
+
+    getGameState() {
+        // var start = performance.now();
+        var gameState = {};
+        if (this.player.health <= 0) {
+            gameState.done = true;
+        } else {
+            gameState.done = false;
+        }
+        gameState.reward = this.getReward();
+        gameState.observation = this.getObservation();
+        // console.log("elapsed: " + (performance.now() - start));
+        return gameState;
     }
 
     spawnPellets() {
@@ -260,6 +338,11 @@ class Environment {
         _.each(this.enemies, (enemy, idx, list) => {
             enemy.act();
         });
+        return this.getGameState();
+    }
+
+    reset() {
+        // Returns the reset observation
         return this.getObservation();
     }
 }

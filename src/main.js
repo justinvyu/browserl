@@ -1,7 +1,8 @@
-function main() {
-    var canvas = document.getElementById("game");
-    var ctx = canvas.getContext("2d");
+var env;
+var canvas = document.getElementById("game");
+var ctx = canvas.getContext("2d");
 
+function main() {
     var translate = ['UP', 'RIGHT', 'DOWN', 'LEFT', 'ATTACK'];
     var interval = null;
 
@@ -14,7 +15,7 @@ function main() {
         var height = parseInt($("#height-input").val());
         var numEnemies = parseInt($("#num-enemies-input").val());
 
-        var env = new Environment(width, height, numEnemies);
+        env = new Environment(width, height, numEnemies);
         canvas.width = env.width * env.squareSize;
         canvas.height = env.height * env.squareSize;
         env.render(ctx);
@@ -29,16 +30,8 @@ function main() {
                 console.log(env);
                 clearInterval(interval);
             }
-        }, 50);
+        }, 100);
     });
 }
 
 main();
-
-var testEnv = new Environment(5, 5, 3);
-var canvas = document.getElementById("game");
-var ctx = canvas.getContext("2d");
-canvas.width = testEnv.width * testEnv.squareSize;
-canvas.height = testEnv.height * testEnv.squareSize;
-testEnv.spawnPellets();
-testEnv.render(ctx);

@@ -88,53 +88,15 @@ class Environment {
                 graphics = true) {
         this.width = width;
         this.height = height;
+        this.startingEnemies = numEnemies;
 
-        // this.numPlayers = numPlayers;
-        this.numEnemies = numEnemies;
-        this.clock = 0; // Game clock;
-        this.score = 0;
-
-        // Initialize the environment model
-        this.model = [];
-        for (var x = 0; x < width; x += 1) {
-            this.model.push([]);
-            for (var y = 0; y < height; y += 1) {
-                this.model[x].push(new Space());
-            }
-        }
-
-        // Initialize the player into the environment
-        var midX = Math.floor(width / 2);
-        var midY = Math.floor(height / 2);
-        this.player = new Player(this, midX, midY);
-
-        // Initialize enemies into the environment
-        this.enemies = [];
-        var enemySpawns = _.sample(_.range(width * height), numEnemies);
-        _.each(enemySpawns, (el, idx, list) => {
-            var enemyX = Math.floor(el / height);
-            var enemyY = el % height;
-            this.enemies[idx] = new Enemy(this, enemyX, enemyY, idx);
-        });
-
-        this.pellets = {};
-        this.pelletId = 0;
         this.graphics = graphics;
         this.squareSize = 50;
 
-        this.observationSpace = {
-            'vision': Math.pow(2 * this.player.fov + 1, 2),
-            'health': 1,
-            'damage': 1,
-        }
-        this.observationLookup = {
-            'vision': () => { return this.player.getVision(); },
-            'health': () => { return this.player.getHealth(); },
-            'damage': () => { return this.player.getDamage(); },
-        }
         // This determines which observation keys are concatenated together when calling `getObservation`
         this.observationKeys = observationKeys;
-        this.actionSpace = this.player.validActions.length;
+
+        this.reset();
     }
 
     drawSquare(ctx, x, y, color) {
@@ -342,7 +304,54 @@ class Environment {
     }
 
     reset() {
-        // Returns the reset observation
+        this.numEnemies = this.startingEnemies;
+        this.score = 0;
+
+        /* === Initialize environment model === */
+
+        this.model = [];
+        for (var x = 0; x < this.width; x += 1) {
+            this.model.push([]);
+            for (var y = 0; y < this.height; y += 1) {
+                this.model[x].push(new Space());
+            }
+        }
+
+        /* === Spawn player === */
+
+        var midX = Math.floor(this.width / 2);
+        var midY = Math.floor(this.height / 2);
+        this.player = new Player(this, midX, midY);
+
+        /* === Spawn enemies === */
+
+        this.enemies = [];
+        var enemySpawns = _.sample(_.range(this.width * this.height), this.numEnemies);
+        _.each(enemySpawns, (el, idx, list) => {
+            var enemyX = Math.floor(el / this.height);
+            var enemyY = el % this.height;
+            this.enemies[idx] = new Enemy(this, enemyX, enemyY, idx);
+        });
+
+        /* === Initialize pellets dictionary === */
+
+        this.pellets = {};
+        this.pelletId = 0;
+
+        /* === Set up the observation and action spaces === */
+
+        this.observationSpace = {
+            'vision': Math.pow(2 * this.player.fov + 1, 2),
+            'health': 1,
+            'damage': 1,
+        }
+        this.observationLookup = {
+            'vision': () => { return this.player.getVision(); },
+            'health': () => { return this.player.getHealth(); },
+            'damage': () => { return this.player.getDamage(); },
+        }
+        this.actionSpace = this.player.validActions.length;
+
         return this.getObservation();
     }
 }

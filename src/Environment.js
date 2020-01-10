@@ -199,7 +199,7 @@ class Environment {
                 gameStateStr += "</br>";
             }
         }
-        gameStateStr += "</br>NUM ENEMIES: " + this.numEnemies;
+        gameStateStr += "</br>ENEMIES LEFT: " + this.numEnemies;
         $("#gameText").html(gameStateStr);
     }
 
@@ -255,6 +255,7 @@ class Environment {
     }
 
     getReward() {
+        // TODO
         return 0;
     }
 

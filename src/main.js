@@ -32,6 +32,8 @@ function main() {
             }
         }, 100);
     });
+
+    document.getElementById("start").click();
 }
 
 main();

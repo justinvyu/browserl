@@ -3,7 +3,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BrowseRL</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="css/normalize.css">
+    <link rel="stylesheet" href="https://unpkg.com/purecss@1.0.1/build/pure-min.css"
+          integrity="sha384-oAOxQR6DkCoMliIh8yFnu25d7Eq/PHS21PClpwjOTeU2jRSq11vu66rf90/cZr47" crossorigin="anonymous">
+    <link rel="stylesheet" href="css/style.css">
 </head>
 <body> 
     <!-- Game Canvas -->
@@ -11,10 +14,12 @@
         <canvas id="game"></canvas>
         <div id="menu">
             <p id="gameText"></p>
-            <input id="width-input" type="text" placeholder="width" value="11"></input>
-            <input id="height-input" type="text" placeholder="height" value="11"></input>
-            <input id="num-enemies-input" type="text" placeholder="number of enemies" value="15"></input>
-            <button id="start">Start</button>
+            <div class="pure-form">
+                <input id="width-input" type="text" placeholder="Width" value="11"></input>
+                <input id="height-input" type="text" placeholder="Height" value="11"></input>
+                <input id="num-enemies-input" type="text" placeholder="# Enemies" value="15"></input>
+                <button id="start" class="pure-button pure-button-primary">Start</button>
+            </div>
         </div>
     </div>
 

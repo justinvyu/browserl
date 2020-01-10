@@ -114,6 +114,11 @@ class Environment {
                      (y * this.squareSize + offsetY));
     }
 
+    inPlayerFOV(x, y) {
+        return x >= this.player.x - this.player.fov && x <= this.player.x + this.player.fov &&
+               y >= this.player.y - this.player.fov && y <= this.player.y + this.player.fov;
+    }
+
     render(ctx) {
         var gameStateStr = "";
         if (this.graphics) {
@@ -142,16 +147,16 @@ class Environment {
                             this.drawSquare(ctx, x + 0.5, y + 0.5, RED, squareSize / 2, squareSize / 2);
                             this.drawSquare(ctx, x + 0.5, y, DARK, squareSize / 2, squareSize / 2);
                             this.drawSquare(ctx, x, y + 0.5, DARK, squareSize / 2, squareSize / 2);
-                            this.drawText(ctx, x, y, space.getPlayer().health, DARKGREEN,
+                            this.drawText(ctx, x, y, space.getPlayer().health, DARK,
                                           "16px Helvetica", squareSize / 4, squareSize / 3);
-                            this.drawText(ctx, x + 0.5, y + 0.5, space.getEnemy().health, DARKRED,
+                            this.drawText(ctx, x + 0.5, y + 0.5, space.getEnemy().health, DARK,
                                           "16px Helvetica", squareSize / 4, squareSize / 3);
                         } else if (space.containsPlayer()) {
                             this.drawSquare(ctx, x, y, GREEN);
-                            this.drawText(ctx, x, y, space.getPlayer().health, DARKGREEN);
+                            this.drawText(ctx, x, y, space.getPlayer().health, DARK);
                         } else if (space.containsEnemy()) {
                             this.drawSquare(ctx, x, y, RED);
-                            this.drawText(ctx, x, y, space.getEnemy().health, DARKRED);
+                            this.drawText(ctx, x, y, space.getEnemy().health, DARK);
                         } else if (space.containsPellet()) {
                             var pellet = space.getPellet();
                             if (pellet instanceof AttackPellet) {
@@ -163,6 +168,10 @@ class Environment {
                             }
                         } else {
                             this.drawSquare(ctx, x, y, DARK);
+                        }
+
+                        if (this.inPlayerFOV(x, y)) {
+                            this.drawSquare(ctx, x, y, "rgba(236, 240, 241, 0.1)");
                         }
                     }
                 }

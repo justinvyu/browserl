@@ -148,6 +148,7 @@ class Enemy extends Entity {
 
     act() {
         if (!super.isDead()) {
+            // TODO: add player tracking / random actions mixed
             super.act(_.random(this.validActions.length - 1));
             if (this.env.model[this.x][this.y].containsPlayer()) {
                 // console.log("Attacking player: " + this.env.player.health);

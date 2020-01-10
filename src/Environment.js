@@ -33,17 +33,17 @@ class Space {
     add(entity) {
         // Returns True if successfully added, false if an invalid entity passed in
         // or if there already exists an entity of that type
-        var className = entity.constructor.name;
-        if (className.includes("Pellet")) {
-            className = "Pellet";
-        }
         if (typeof(entity) != "object" || 
             !(entity instanceof Entity || entity instanceof Pellet)) {
             console.log("Must pass in an object of the type Player, Enemy, or Pellet");
             return false;
         }
+        var className = entity.constructor.name;
+        if (className.includes("Pellet")) {
+            className = "Pellet";
+        }
         if (this.contents[className] != null) {
-            console.log(className + " already exists in this space");
+            // console.log(className + " already exists in this space");
             return false;
         }
         this.contents[className] = entity;
@@ -53,17 +53,17 @@ class Space {
     remove(entity) {
         // Returns True if successfully removed, false if an invalid entity passed in
         // or if there does not exist an entity of that type
-        var className = entity.constructor.name;
-        if (className.includes("Pellet")) {
-            className = "Pellet";
-        }
         if (typeof(entity) != "object" || 
             !(entity instanceof Entity || entity instanceof Pellet)) {
             console.log("Must pass in an object of the type Player, Enemy, or Pellet");
             return false;
         }
+        var className = entity.constructor.name;
+        if (className.includes("Pellet")) {
+            className = "Pellet";
+        }
         if (this.contents[className] == null) {
-            console.log(className + " does not exist in this space");
+            // console.log(className + " does not exist in this space");
             return false;
         }
         this.contents[className] = null;

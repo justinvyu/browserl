@@ -24,7 +24,7 @@ class Entity {
     }
 
     set health(value) {
-        this._health = Math.min(this.maxHealth, value);
+        this._health = Math.max(Math.min(this.maxHealth, value), 0);
     }
 
     getHealth() {
@@ -59,11 +59,16 @@ class Entity {
 
     move(dx, dy) {
         // TODO: Fix this to not allow 2 entities to move into the same square
-        this.env.model[this.x][this.y].remove(this);
         var loc = this.getPotentialLocation(dx, dy);
-        this.x = loc[0];
-        this.y = loc[1];
-        this.env.model[this.x][this.y].add(this);
+        var newX = loc[0];
+        var newY = loc[1];
+        // Try adding to the new location, if it's possible to move there, then
+        // remove from the current Space and update the (x, y) coordinate.
+        if (this.env.model[newX][newY].add(this)) {
+            this.env.model[this.x][this.y].remove(this);
+            this.x = newX;
+            this.y = newY;
+        }
     }
 
     isDead() {
@@ -121,6 +126,7 @@ class Player extends Entity {
             super.act(action);
             this.killedEnemy = false;
         }
+        // Possible or a pellet to spawn after the player acts? When should pellet spawning happen?
         if (this.env.model[this.x][this.y].containsPellet()) {
             super.eat(this.env.model[this.x][this.y].getPellet());
         } else {
@@ -136,18 +142,13 @@ class Enemy extends Entity {
         this.deathTrigger = false;
     }
 
-    move(dx, dy) {
-        var loc = this.getPotentialLocation(dx, dy);
-        if (!this.env.model[loc[0]][loc[1]].containsEnemy()) {
-            super.move(dx, dy);
-        }
-    }
-
     act() {
         if (!super.isDead()) {
             super.act(_.random(this.validActions.length - 1));
-            if (this.env.player.x == this.x && this.env.player.y == this.y) {
-                super.attack(this.env.player);
+            if (this.env.model[this.x][this.y].containsPlayer()) {
+                // console.log("Attacking player: " + this.env.player.health);
+                super.attack(this.env.model[this.x][this.y].getPlayer());
+                // console.log("New health: " + this.env.player.health);
             }
             if (this.env.model[this.x][this.y].containsPellet()) {
                 super.eat(this.env.model[this.x][this.y].getPellet());

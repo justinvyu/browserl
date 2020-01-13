@@ -141,15 +141,17 @@ class Player extends Entity {
 
 class Enemy extends Entity {
     constructor(env, spawnX, spawnY, id) {
-        super(env, 1, 2, spawnX, spawnY);
+        super(env, 5, 1, spawnX, spawnY);
         this.id = id;
         this.deathTrigger = false;
+        this.validActions = [ATTACK];  // Do this to simplify the environment
     }
 
     act() {
         if (!super.isDead()) {
             // TODO: add player tracking / random actions mixed
-            super.act(_.random(this.validActions.length - 1));
+            // super.act(_.random(this.validActions.length - 1));
+            super.act(_.sample(this.validActions));
             if (this.env.model[this.x][this.y].containsPlayer()) {
                 // console.log("Attacking player: " + this.env.player.health);
                 super.attack(this.env.model[this.x][this.y].getPlayer());

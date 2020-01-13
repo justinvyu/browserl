@@ -106,7 +106,8 @@ class Environment {
                      width, height);
     }
 
-    drawText(ctx, x, y, str, color, font = "25px Helvetica", offsetX = 0.5 * this.squareSize, offsetY = 0.7 * this.squareSize) {
+    drawText(ctx, x, y, str, color, font = "25px Helvetica",
+             offsetX = 0.5 * this.squareSize, offsetY = 0.7 * this.squareSize) {
         ctx.font = font;
         ctx.fillStyle = color;
         ctx.fillText(String(str),
@@ -170,7 +171,7 @@ class Environment {
                             this.drawSquare(ctx, x, y, DARK);
                         }
 
-                        if (this.inPlayerFOV(x, y)) {
+                        if (this.inPlayerFOV(x, y) && !space.containsPlayer()) {
                             this.drawSquare(ctx, x, y, "rgba(236, 240, 241, 0.1)");
                         }
                     }
@@ -262,7 +263,6 @@ class Environment {
         } else {
             reward = 1;
         }
-        this.score += reward;
         return reward;
     }
 
@@ -275,13 +275,13 @@ class Environment {
             gameState.done = false;
         }
         gameState.reward = this.getReward();
-        gameState.observation = this.getObservation();
+        gameState.obs = this.getObservation();
         // console.log("elapsed: " + (performance.now() - start));
         return gameState;
     }
 
     spawnPellets() {
-        var numPelletsToSpawn = _.random(0, 2);
+        var numPelletsToSpawn = _.random(0, 1);
         var pelletSpawns = _.sample(_.range(this.width * this.height), numPelletsToSpawn);
         _.each(pelletSpawns, (spawnLoc, idx, list) => {
             var pelletX = Math.floor(spawnLoc / this.height);
@@ -308,6 +308,7 @@ class Environment {
         _.each(this.enemies, (enemy, idx, list) => {
             enemy.act();
         });
+        this.score += this.getReward();
         return this.getGameState();
     }
 
@@ -348,17 +349,24 @@ class Environment {
 
         /* === Set up the observation and action spaces === */
 
+        // this.observationShapes = {
+        //     'vision': Math.pow(2 * this.player.fov + 1, 2),
+        //     'health': 1,
+        //     'damage': 1,
+        // }
         this.observationSpace = {
-            'vision': Math.pow(2 * this.player.fov + 1, 2),
-            'health': 1,
-            'damage': 1,
+            'shape': [Math.pow(2 * this.player.fov + 1, 2) + 1 + 1],
         }
         this.observationLookup = {
             'vision': () => { return this.player.getVision(); },
             'health': () => { return this.player.getHealth(); },
             'damage': () => { return this.player.getDamage(); },
         }
-        this.actionSpace = this.player.validActions.length;
+        this.actionSpace = {
+            'numActions': this.player.validActions.length,
+            'shape': [1],
+            'sample': () => { return _.random(this.player.validActions.length - 1); }
+        }
 
         return this.getObservation();
     }

@@ -67,7 +67,7 @@ class LinearSchedule {
         this.eps = start;
         this.end = end;
         this.step = step;
-        if (start - end < 0) {
+        if (start - end > 0) {
             this.step *= -1;
         }
     }
@@ -108,8 +108,9 @@ class DeepQLearner {
                 trainFreq = 1,
                 batchSize = 32,
                 learningStarts = 1000,
-                gamma = 1.0,
-                targetNetworkUpdateFreq = 500) {
+                gamma = 0.99,
+                targetNetworkUpdateFreq = 500,
+                printFreq = 1000) {
         this.env = env;
         this.Q = Q;
         this.targetQ = targetQ;
@@ -120,16 +121,18 @@ class DeepQLearner {
         this.learningStarts = learningStarts;
         this.gamma = gamma;
         this.targetNetworkUpdateFreq = targetNetworkUpdateFreq;
+        this.printFreq = printFreq;
 
         this.timestep = 0;
         this.replayBuffer = new ReplayBuffer(this.bufferSize);
-        this.policy = new EpsilonGreedyPolicy(this.Q, this.env, new LinearSchedule(1, 0.1, 0.001));
+        this.policy = new EpsilonGreedyPolicy(this.Q, this.env, new LinearSchedule(1, 0, 0.0001));
         this.optimizer = tf.train.adam(this.lr);
 
         this.render = render;
         this.ctx = ctx;
 
         this.history = [];
+        this.lossHistory = [];
 
         this.updateTarget();
     }
@@ -241,7 +244,8 @@ class DeepQLearner {
                 const loss = tf.losses.huberLoss(tdTarget, selectedQ);
                 return loss;
             }, true); // do I need to add the varList? how to get that?
-            // lossHistory.push({'x': this.timestep, 'y': bellmanError.dataSync()[0]});
+            // this.lossHistory.push({'x': this.timestep, 'y': bellmanError.dataSync()[0]});
+            this.lossHistory.push(bellmanError.dataSync()[0]);
         }
 
         /* === Update the target Q network === */
@@ -251,9 +255,14 @@ class DeepQLearner {
 
         /* === Reset the environment === */
         if (done) {
-            this.history.push({ x: this.history.length, y: this.env.score });
+            // this.history.push({ x: this.history.length, y: this.env.score });
+            this.history.push(this.env.score);
             console.log("Episode Return: " + this.env.score);
             this.env.reset();
+        }
+
+        if (this.timestep % this.printFreq == 0) {
+            console.log("Timestep #" + this.timestep);
         }
 
         this.timestep += 1;
@@ -270,14 +279,15 @@ class DeepQLearner {
                     this.trainStep();
                     this.env.render(this.ctx);
                     if (this.timestep - startTimestep > numTimesteps) {
-                        const surface = { name: 'Return per episode', tab: 'Charts' };
-                        const data = { values: [this.history] };
-                        tfvis.render.linechart(surface, data);
+                        const surface = { name: 'Training Plots', tab: 'Charts' };
+                        const dataReturns = { values: [this.history] };
+                        tfvis.render.linechart(surface, dataReturns);
+                        const dataLosses = { values: [this.lossHistory] };
+                        tfvis.render.linechart(surface, dataLosses);
                         clearInterval(interval);
                     }
-                }, 50);
+                }, 25);
             } else {
-                const lossHistory = [];
                 for (var step = 0; step < numTimesteps; step += 1) {
                     this.trainStep();
                 }

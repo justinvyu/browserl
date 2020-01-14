@@ -118,6 +118,7 @@ class Player extends Entity {
         super(env, 50, 1, spawnX, spawnY);
         this.fov = fov;  // Number of squares away that can be seen, centered at the player
         this.killedEnemy = false;  // Indicator if the player killed an enemy this turn.
+        this.atePellet = false;  // Indicator if the player ate a pellet this turn.
     }
 
     act(action) {
@@ -130,11 +131,13 @@ class Player extends Entity {
             super.act(action);
             this.killedEnemy = false;
         }
-        // Possible or a pellet to spawn after the player acts? When should pellet spawning happen?
+        // Possible for a pellet to spawn after the player acts? When should pellet spawning happen?
         if (this.env.model[this.x][this.y].containsPellet()) {
             super.eat(this.env.model[this.x][this.y].getPellet());
+            this.atePellet = true;
         } else {
             this.health -= 1;
+            this.atePellet = false;
         }
     }
 }

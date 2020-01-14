@@ -84,7 +84,7 @@ class Space {
 
 class Environment {
     constructor(width, height, numEnemies,
-                observationKeys = ["vision", "health", "damage"],
+                observationKeys = ["vision", "health", "damage", "x", "y"],
                 graphics = true) {
         this.width = width;
         this.height = height;
@@ -257,8 +257,11 @@ class Environment {
     getReward() {
         var reward;
         if (this.player.isDead()) {
-            reward = -100;
+            // reward = -100;
+            reward = 1;
         } else if (this.player.killedEnemy) {
+            reward = 2;
+        } else if (this.player.atePellet) {
             reward = 5;
         } else {
             reward = 1;
@@ -328,9 +331,11 @@ class Environment {
 
         /* === Spawn player === */
 
-        var midX = Math.floor(this.width / 2);
-        var midY = Math.floor(this.height / 2);
-        this.player = new Player(this, midX, midY);
+        // var midX = Math.floor(this.width / 2);
+        // var midY = Math.floor(this.height / 2);
+        const randX = _.random(this.width - 1);
+        const randY = _.random(this.height - 1);
+        this.player = new Player(this, randX, randY);
 
         /* === Spawn enemies === */
 
@@ -355,12 +360,16 @@ class Environment {
         //     'damage': 1,
         // }
         this.observationSpace = {
-            'shape': [Math.pow(2 * this.player.fov + 1, 2) + 1 + 1],
+            // 'shape': [Math.pow(2 * this.player.fov + 1, 2) + 1 + 1],
+            'shape': [this.width * this.height + 1 + 1 + 1 + 1],
         }
         this.observationLookup = {
-            'vision': () => { return this.player.getVision(); },
+            // 'vision': () => { return this.player.getVision(); },
+            'vision': () => { return this.encodeGrid(0, 0, this.width - 1, this.height - 1); },
             'health': () => { return this.player.getHealth(); },
             'damage': () => { return this.player.getDamage(); },
+            'x': () => { return this.player.x; },
+            'y': () => { return this.player.y; },
         }
         this.actionSpace = {
             'numActions': this.player.validActions.length,

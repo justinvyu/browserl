@@ -70,14 +70,14 @@ var ctx = canvas.getContext("2d");
 
 // main();
 
-env = new Environment(11, 11, 15);
+env = new Environment(3, 3, 2);
 
 canvas.width = env.width * env.squareSize;
 canvas.height = env.height * env.squareSize;
 env.render(ctx);
 
-const Q = mlp(env.observationSpace.shape[0], [256, 256], env.actionSpace.numActions);
-const targetQ = mlp(env.observationSpace.shape[0], [256, 256], env.actionSpace.numActions);
+const Q = mlp(env.observationSpace.shape[0], [50, 50], env.actionSpace.numActions);
+const targetQ = mlp(env.observationSpace.shape[0], [50, 50], env.actionSpace.numActions);
 const dqn = new DeepQLearner(env, Q, targetQ, true, ctx);
 // const dqn = new DeepQLearner(env, Q, targetQ);
 

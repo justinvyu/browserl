@@ -115,7 +115,7 @@ class Entity {
 
 class Player extends Entity {
     constructor(env, spawnX, spawnY, fov = 2) {
-        super(env, 50, 1, spawnX, spawnY);
+        super(env, 10, 1, spawnX, spawnY);
         this.fov = fov;  // Number of squares away that can be seen, centered at the player
         this.killedEnemy = false;  // Indicator if the player killed an enemy this turn.
         this.atePellet = false;  // Indicator if the player ate a pellet this turn.

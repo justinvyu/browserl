@@ -84,10 +84,36 @@ class Space {
 
 class Environment {
     constructor(width, height, numEnemies,
-                observationKeys = ["vision", "health", "damage", "x", "y"],
+                // observationKeys = ["vision", "health", "damage", "x", "y"],
+                observationKeys = ["x", "y"],
                 graphics = true) {
         this.width = width;
         this.height = height;
+
+        // JUST TO MAKE THE ENVIRONMENT SIMPLER === START
+        // numEnemies = 15;
+        // this.enemySpawns = [55, 110, 3, 80, 1, 64, 7, 36, 95, 35, 28, 24, 81, 76, 114];
+        // this.pelletSpawns = [
+        //     {x: 5, y: 10, type: 'Pellet'},
+        //     {x: 2, y: 1, type: 'Pellet'},
+        //     {x: 10, y: 5, type: 'Pellet'},
+        //     {x: 1, y: 8, type: 'Pellet'},
+        //     {x: 1, y: 1, type: 'Pellet'},
+        //     {x: 7, y: 1, type: 'Pellet'},
+        //     {x: 1, y: 6, type: 'Pellet'},
+        //     {x: 2, y: 7, type: 'Pellet'},
+        //     {x: 5, y: 2, type: 'Pellet'},
+        //     {x: 9, y: 0, type: 'Pellet'},
+        //     {x: 5, y: 3, type: 'Pellet'},
+        // ];
+
+        numEnemies = 2;
+        this.enemySpawns = [5, 6];
+        this.pelletSpawns = [
+            {x: 2, y: 2, type: 'Pellet'},
+        ];
+        // JUST TO MAKE THE ENVIRONMENT SIMPLER === END
+
         this.startingEnemies = numEnemies;
 
         this.graphics = graphics;
@@ -258,13 +284,16 @@ class Environment {
         var reward;
         if (this.player.isDead()) {
             // reward = -100;
-            reward = 1;
+            // reward = 1;
+            reward = 0;
         } else if (this.player.killedEnemy) {
             reward = 2;
         } else if (this.player.atePellet) {
             reward = 5;
+        } else if (this.model[this.player.x][this.player.y].containsEnemy()) {
+            reward = -1;
         } else {
-            reward = 1;
+            reward = 0;
         }
         return reward;
     }
@@ -272,12 +301,13 @@ class Environment {
     getGameState() {
         // var start = performance.now();
         var gameState = {};
-        if (this.player.health <= 0) {
-            gameState.done = true;
-        } else {
-            gameState.done = false;
-        }
+        // if (this.player.health <= 0) {
+        //     gameState.done = true;
+        // } else {
+        //     gameState.done = false;
+        // }
         gameState.reward = this.getReward();
+        gameState.done = (gameState.reward == 5 || gameState.reward == -1 || this.player.health <= 0);
         gameState.obs = this.getObservation();
         // console.log("elapsed: " + (performance.now() - start));
         return gameState;
@@ -306,7 +336,7 @@ class Environment {
     }
 
     step(action) {
-        this.spawnPellets();
+        // this.spawnPellets();
         this.player.act(action);
         _.each(this.enemies, (enemy, idx, list) => {
             enemy.act();
@@ -333,15 +363,17 @@ class Environment {
 
         // var midX = Math.floor(this.width / 2);
         // var midY = Math.floor(this.height / 2);
-        const randX = _.random(this.width - 1);
-        const randY = _.random(this.height - 1);
-        this.player = new Player(this, randX, randY);
+        // const randX = _.random(this.width - 1);
+        // const randY = _.random(this.height - 1);
+        this.player = new Player(this, 0, 0);
 
         /* === Spawn enemies === */
 
         this.enemies = [];
-        var enemySpawns = _.sample(_.range(this.width * this.height), this.numEnemies);
-        _.each(enemySpawns, (el, idx, list) => {
+        if (this.enemySpawns == undefined) {
+            this.enemySpawns = _.sample(_.range(this.width * this.height), this.numEnemies);
+        } 
+        _.each(this.enemySpawns, (el, idx, list) => {
             var enemyX = Math.floor(el / this.height);
             var enemyY = el % this.height;
             this.enemies[idx] = new Enemy(this, enemyX, enemyY, idx);
@@ -352,6 +384,14 @@ class Environment {
         this.pellets = {};
         this.pelletId = 0;
 
+        // JUST TO MAKE THE ENVIRONMENT SIMPLER === START
+        for (var i = 0; i < this.pelletSpawns.length; i += 1) {
+            const {x, y, type} = this.pelletSpawns[i];
+            this.pellets[this.pelletId] = new Pellet(this, x, y, this.pelletId);
+            this.pelletId += 1;
+        }
+        // JUST TO MAKE THE ENVIRONMENT SIMPLER === END
+
         /* === Set up the observation and action spaces === */
 
         // this.observationShapes = {
@@ -360,8 +400,9 @@ class Environment {
         //     'damage': 1,
         // }
         this.observationSpace = {
-            // 'shape': [Math.pow(2 * this.player.fov + 1, 2) + 1 + 1],
-            'shape': [this.width * this.height + 1 + 1 + 1 + 1],
+            // 'shape': [Math.pow(2 * this.player.fov + 1, 2) + 1 + 1],  // Player FOV
+            // 'shape': [this.width * this.height + 1 + 1 + 1 + 1],      // Full game state
+            'shape': [2],
         }
         this.observationLookup = {
             // 'vision': () => { return this.player.getVision(); },

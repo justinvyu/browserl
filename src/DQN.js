@@ -107,8 +107,9 @@ class DeepQLearner {
                 bufferSize = 5e4,
                 trainFreq = 1,
                 batchSize = 32,
-                learningStarts = 100,
+                learningStarts = 32,
                 gamma = 0.999,
+                tau = 0.999,
                 targetNetworkUpdateFreq = 500,
                 printFreq = 1000) {
         this.env = env;
@@ -136,6 +137,7 @@ class DeepQLearner {
 
         // Target Q only updated via copying from the online Q function
         this.targetQ.trainable = false;
+        this.tau = tau;
         this.updateTarget();
     }
 
@@ -180,7 +182,22 @@ class DeepQLearner {
         // TODO: Polyak averaging
         tf.tidy(() => {
             for (var i = 0; i < this.targetQ.layers.length; i += 1) {
-                this.targetQ.layers[i].setWeights(this.Q.layers[i].getWeights());
+                // Directly copying weights
+                // this.targetQ.layers[i].setWeights(this.Q.layers[i].getWeights());
+
+                // Soft target update
+                const weights = this.Q.getWeights();
+                const targetWeights = this.targetQ.getWeights();
+                for (var j = 0; j < weights.length; j += 1) {
+                    targetWeights[j].assign(tf.scalar(this.tau)
+                                              .mul(weights[j]).add(tf.scalar(1 - this.tau)
+                                                                      .mul(targetWeights[j])));
+                }
+                // this.targetQ.layers[i].setWeights(
+                //     tf.scalar(this.tau)
+                //       .mul(this.Q.layers[i].getWeights())
+                //       .add(tf.scalar(1 - this.tau)
+                //              .mul(this.targetQ.layers[i].getWeights())));
             }
         });
     }

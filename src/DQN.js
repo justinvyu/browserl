@@ -138,7 +138,7 @@ class DeepQLearner {
         // Target Q only updated via copying from the online Q function
         this.targetQ.trainable = false;
         this.tau = tau;
-        this.updateTarget();
+        this.updateTarget(1); // Start with equal weights
     }
 
     initialExploration() {
@@ -178,7 +178,7 @@ class DeepQLearner {
         });
     }
 
-    updateTarget() {
+    updateTarget(tau) {
         // TODO: Polyak averaging
         tf.tidy(() => {
             for (var i = 0; i < this.targetQ.layers.length; i += 1) {
@@ -189,15 +189,10 @@ class DeepQLearner {
                 const weights = this.Q.getWeights();
                 const targetWeights = this.targetQ.getWeights();
                 for (var j = 0; j < weights.length; j += 1) {
-                    targetWeights[j].assign(tf.scalar(this.tau)
-                                              .mul(weights[j]).add(tf.scalar(1 - this.tau)
+                    targetWeights[j].assign(tf.scalar(tau)
+                                              .mul(weights[j]).add(tf.scalar(1 - tau)
                                                                       .mul(targetWeights[j])));
                 }
-                // this.targetQ.layers[i].setWeights(
-                //     tf.scalar(this.tau)
-                //       .mul(this.Q.layers[i].getWeights())
-                //       .add(tf.scalar(1 - this.tau)
-                //              .mul(this.targetQ.layers[i].getWeights())));
             }
         });
     }
@@ -218,7 +213,7 @@ class DeepQLearner {
         }
     }
 
-    trainStep() {
+    trainStep(stopGradient = false) {
         /* === Policy takes an action === */
         const currObs = this.env.getObservation();
         const action = this.policy.getAction(currObs);
@@ -229,6 +224,7 @@ class DeepQLearner {
 
         /* === Train the Q function every `trainFreq` steps === */
         if (this.timestep % this.trainFreq == 0) {
+            // const {values, grads} = tf.variableGrads(() => { return tf.tidy(() => {
             const bellmanError = this.optimizer.minimize(() => { return tf.tidy(() => {
                 /* === Sample training batch from replay buffer === */
                 const trainBatch = this.convertToTensor(this.replayBuffer.sample(this.batchSize));
@@ -247,14 +243,16 @@ class DeepQLearner {
 
                 /* === Sample training batch from replay buffer === */
                 // Double DQN, y = r + gamma * Q_target(s', argmax_{a'} Q(s', a'))
-                // const nextObsQVals = this.Q.predict(trainBatch.nextObs);  // Q-values of s' w.r.t online Q function
-                // const acts = tf.argMax(nextObsQVals, 1);                  // Take the argMax to get the best actions
-                // const select = tf.oneHot(acts, this.env.actionSpace.numActions);  // Construct select matrix and multiply/reduce as above
-                // const maxNextObsQ = tf.sum(nextObsTargetQVals.mul(select), 1, true).mul(tf.scalar(1).sub(trainBatch.done));
-
+                const nextObsQVals = this.Q.predict(trainBatch.nextObs);  // Q-values of s' w.r.t online Q function
+                const acts = tf.argMax(nextObsQVals, 1);                  // Take the argMax to get the best actions
+                const select = tf.oneHot(acts, this.env.actionSpace.numActions);  // Construct select matrix and multiply/reduce as above
+                const _maxNextObsQ = tf.sum(nextObsTargetQVals.mul(select), 1, true).mul(tf.scalar(1).sub(trainBatch.done));
+                // Hacky way to do stop gradient, since the target shouldn't affect the gradient
+                const maxNextObsQ = tf.tensor2d(_maxNextObsQ.dataSync(), _maxNextObsQ.shape);
+                
                 // Regular DQN
-                const _maxNextObsQ = tf.max(nextObsTargetQVals, 1, true);
-                const maxNextObsQ = _maxNextObsQ.mul(tf.scalar(1).sub(trainBatch.done));
+                // const _maxNextObsQ = tf.max(nextObsTargetQVals, 1, true);
+                // const maxNextObsQ = _maxNextObsQ.mul(tf.scalar(1).sub(trainBatch.done));
 
                 /* === Calculate Q-learning TD target === */
                 const tdTarget = trainBatch.reward.add(tf.scalar(this.gamma).mul(maxNextObsQ));
@@ -263,13 +261,16 @@ class DeepQLearner {
                 const loss = tf.losses.huberLoss(tdTarget, selectedQ);
                 return loss;
             }) }, true, this.Q.getWeights());
+            // })});
+            // Object.keys(grads).forEach(varName => grads[varName].print());
+
             // this.lossHistory.push({'x': this.timestep, 'y': bellmanError.dataSync()[0]});
-            this.lossHistory.push(bellmanError.dataSync()[0]);
+            // this.lossHistory.push(bellmanError.dataSync()[0]);
         }
 
         /* === Update the target Q network === */
         if (this.timestep % this.targetNetworkUpdateFreq == 0) {
-            this.updateTarget();
+            this.updateTarget(this.tau);
         }
 
         /* === Reset the environment === */

@@ -107,8 +107,8 @@ class DeepQLearner {
                 bufferSize = 5e4,
                 trainFreq = 1,
                 batchSize = 32,
-                learningStarts = 1000,
-                gamma = 0.99,
+                learningStarts = 100,
+                gamma = 0.999,
                 targetNetworkUpdateFreq = 500,
                 printFreq = 1000) {
         this.env = env;
@@ -134,6 +134,8 @@ class DeepQLearner {
         this.history = [];
         this.lossHistory = [];
 
+        // Target Q only updated via copying from the online Q function
+        this.targetQ.trainable = false;
         this.updateTarget();
     }
 
@@ -183,6 +185,22 @@ class DeepQLearner {
         });
     }
 
+    convertToTensor(batch) {
+        const {obs, action, reward, nextObs, done} = batch;
+        return {
+            'obs': tf.tensor(obs,
+                                [this.batchSize].concat(this.env.observationSpace.shape)),
+            'action': tf.tensor2d(action,
+                                    [this.batchSize].concat(this.env.actionSpace.shape), 'int32'),
+            'reward': tf.tensor2d(reward,
+                                    [this.batchSize, 1]),
+            'nextObs': tf.tensor(nextObs,
+                                    [this.batchSize].concat(this.env.observationSpace.shape)),
+            'done': tf.tensor2d(done,
+                                [this.batchSize, 1], 'bool'),
+        }
+    }
+
     trainStep() {
         /* === Policy takes an action === */
         const currObs = this.env.getObservation();
@@ -194,56 +212,40 @@ class DeepQLearner {
 
         /* === Train the Q function every `trainFreq` steps === */
         if (this.timestep % this.trainFreq == 0) {
-            const bellmanError = this.optimizer.minimize(() => {
-                // TODO: turn this into a converToTensor function
-                // TODO: put this all into one giant tidy
-                const trainBatch = tf.tidy(() => {
-                    const {obs, action, reward, nextObs, done} = this.replayBuffer.sample(this.batchSize);
-                    return {
-                        'obs': tf.tensor(obs,
-                                         [this.batchSize].concat(this.env.observationSpace.shape)),
-                        'action': tf.tensor2d(action,
-                                              [this.batchSize].concat(this.env.actionSpace.shape), 'int32'),
-                        'reward': tf.tensor2d(reward,
-                                              [this.batchSize, 1]),
-                        'nextObs': tf.tensor(nextObs,
-                                             [this.batchSize].concat(this.env.observationSpace.shape)),
-                        'done': tf.tensor2d(done,
-                                            [this.batchSize, 1], 'bool'),
-                    }
-                });
+            const bellmanError = this.optimizer.minimize(() => { return tf.tidy(() => {
+                /* === Sample training batch from replay buffer === */
+                const trainBatch = this.convertToTensor(this.replayBuffer.sample(this.batchSize));
 
-                // Q
+                /* === Calculate Q(s, a) and Q'(s', a') === */
                 const currObsQVals = this.Q.predict(trainBatch.obs);
-                // target Q of next state
                 const nextObsTargetQVals = this.targetQ.predict(trainBatch.nextObs);
 
+                /* === Calculate Q(s, a) for the actual action taken === */
                 // Mask Q with the action taken
                 // currObsQVals = batchSize x numActions
                 // tf.oneHot(...) = batchSize x numActions
                 // Then reduce along the 1st axis (summing over the rows), to get batchSize x 1
-                const selectedQ = tf.tidy(() => {
-                    // return tf.sum(currObsQVals.mul(tf.oneHot(trainBatch.action, this.env.actionSpace.numActions)), 1);
-                    return tf.sum(currObsQVals.mul(
-                        tf.oneHot(trainBatch.action,
-                                  this.env.actionSpace.numActions).reshape(currObsQVals.shape)), 1, true);
-                });
+                const selectedQ = tf.sum(currObsQVals.mul(
+                    tf.oneHot(trainBatch.action, this.env.actionSpace.numActions).reshape(currObsQVals.shape)), 1, true);
 
-                // Take max of Q in next state, want batchSize x 1
-                const maxNextObsQ = tf.tidy(() => {
-                    const _maxNextObsQ = tf.max(nextObsTargetQVals, 1, true);
-                    return _maxNextObsQ.mul(tf.scalar(1).sub(trainBatch.done));
-                });
+                /* === Sample training batch from replay buffer === */
+                // Double DQN, y = r + gamma * Q_target(s', argmax_{a'} Q(s', a'))
+                // const nextObsQVals = this.Q.predict(trainBatch.nextObs);  // Q-values of s' w.r.t online Q function
+                // const acts = tf.argMax(nextObsQVals, 1);                  // Take the argMax to get the best actions
+                // const select = tf.oneHot(acts, this.env.actionSpace.numActions);  // Construct select matrix and multiply/reduce as above
+                // const maxNextObsQ = tf.sum(nextObsTargetQVals.mul(select), 1, true).mul(tf.scalar(1).sub(trainBatch.done));
 
-                // Q(s, a) = r(s, a) + gamma * max_a' Q_target(s', a')
-                const tdTarget = tf.tidy(() => {
-                    return trainBatch.reward.add(tf.scalar(this.gamma).mul(maxNextObsQ));
-                });
+                // Regular DQN
+                const _maxNextObsQ = tf.max(nextObsTargetQVals, 1, true);
+                const maxNextObsQ = _maxNextObsQ.mul(tf.scalar(1).sub(trainBatch.done));
 
-                // Compute TD error
+                /* === Calculate Q-learning TD target === */
+                const tdTarget = trainBatch.reward.add(tf.scalar(this.gamma).mul(maxNextObsQ));
+
+                /* === Compute loss === */
                 const loss = tf.losses.huberLoss(tdTarget, selectedQ);
                 return loss;
-            }, true); // do I need to add the varList? how to get that?
+            }) }, true, this.Q.getWeights());
             // this.lossHistory.push({'x': this.timestep, 'y': bellmanError.dataSync()[0]});
             this.lossHistory.push(bellmanError.dataSync()[0]);
         }

@@ -7,6 +7,9 @@
     <link rel="stylesheet" href="https://unpkg.com/purecss@1.0.1/build/pure-min.css"
           integrity="sha384-oAOxQR6DkCoMliIh8yFnu25d7Eq/PHS21PClpwjOTeU2jRSq11vu66rf90/cZr47" crossorigin="anonymous">
     <link rel="stylesheet" href="css/style.css">
+
+    <!-- Plotly -->
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 </head>
 <body> 
     <!-- Game Canvas -->
@@ -23,6 +26,8 @@
             </div>
         </div>
     </div>
+
+    <div id="plot" style="width:600px;height:300px;"></div>
 
     <!-- JQuery -->
     <script
@@ -44,6 +49,5 @@
     <script src="src/Model.js"></script>
     <script src="src/DQN.js"></script>
     <script src="src/main.js"></script>
-    <!-- <script src="src/test.js"></script> -->
 </body>
 </html>

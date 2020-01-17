@@ -107,7 +107,7 @@ class DeepQLearner {
                 bufferSize = 5e4,
                 trainFreq = 1,
                 batchSize = 32,
-                learningStarts = 32,
+                learningStarts = 1000,
                 gamma = 0.999,
                 tau = 0.999,
                 targetNetworkUpdateFreq = 500,
@@ -265,7 +265,7 @@ class DeepQLearner {
             // Object.keys(grads).forEach(varName => grads[varName].print());
 
             // this.lossHistory.push({'x': this.timestep, 'y': bellmanError.dataSync()[0]});
-            // this.lossHistory.push(bellmanError.dataSync()[0]);
+            this.lossHistory.push(bellmanError.dataSync()[0]);
         }
 
         /* === Update the target Q network === */
@@ -300,9 +300,9 @@ class DeepQLearner {
                     this.env.render(this.ctx);
                     if (this.timestep - startTimestep > numTimesteps) {
                         const surface = { name: 'Training Plots', tab: 'Charts' };
-                        const dataReturns = { values: [this.history] };
+                        const dataReturns = { values: [{x: _.range(this.history.length), y: this.history}] };
                         tfvis.render.linechart(surface, dataReturns);
-                        const dataLosses = { values: [this.lossHistory] };
+                        const dataLosses = { values: [{x: _.range(this.lossHistory.length), y: this.lossHistory}] };
                         tfvis.render.linechart(surface, dataLosses);
                         clearInterval(interval);
                     }

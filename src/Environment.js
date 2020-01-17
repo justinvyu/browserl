@@ -285,15 +285,15 @@ class Environment {
         if (this.player.isDead()) {
             // reward = -100;
             // reward = 1;
-            reward = 0;
+            reward = -1;
         } else if (this.player.killedEnemy) {
             reward = 2;
         } else if (this.player.atePellet) {
-            reward = 5;
+            reward = 10;
         } else if (this.model[this.player.x][this.player.y].containsEnemy()) {
-            reward = -1;
+            reward = -10;
         } else {
-            reward = 0;
+            reward = -1;
         }
         return reward;
     }
@@ -307,7 +307,7 @@ class Environment {
         //     gameState.done = false;
         // }
         gameState.reward = this.getReward();
-        gameState.done = (gameState.reward == 5 || gameState.reward == -1 || this.player.health <= 0);
+        gameState.done = (gameState.reward == 10 || gameState.reward == -10 || this.player.health <= 0);
         gameState.obs = this.getObservation();
         // console.log("elapsed: " + (performance.now() - start));
         return gameState;

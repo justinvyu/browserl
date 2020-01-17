@@ -1,6 +1,6 @@
 var env;
-var canvas = document.getElementById("game");
-var ctx = canvas.getContext("2d");
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
 
 // function main() {
 //     var translate = ['UP', 'RIGHT', 'DOWN', 'LEFT', 'ATTACK'];
@@ -84,3 +84,19 @@ const dqn = new DeepQLearner(env, Q, targetQ, true, ctx);
 $("#start").click(e => {
     dqn.train(5000);
 });
+
+const plot = document.getElementById('plot');
+const plotData = (x, y, weight = 0) => {
+    var last = y[0];  // First value in the plot (first timestep)
+    var smoothed = [];
+    var smoothedVal;
+    for (var i = 0; i < y.length; i += 1) {
+        smoothedVal = last * weight + (1 - weight) * y[i];  // Calculate smoothed value
+        smoothed.push(smoothedVal);                         // Save it
+        last = smoothedVal;                                 // Anchor the last smoothed value
+    }
+
+    Plotly.plot(plot, [{
+        x, y: smoothed
+    }], { margin: { t: 0 } });
+}

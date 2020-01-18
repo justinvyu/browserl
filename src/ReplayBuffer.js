@@ -44,15 +44,15 @@ class ReplayBuffer {
 class PrioritizedReplayBuffer extends ReplayBuffer {
     constructor(size, alpha) {
         super(size);
-        self.alpha = alpha;
+        this.alpha = alpha;
         
         var treeCapacity = 1
         while (treeCapacity < size) {
             treeCapacity *= 2;
         }
 
-        this.sumTree = SumSegmentTree(treeCapacity);
-        this.minTree = MinSegmentTree(treeCapacity);
+        this.sumTree = new SumSegmentTree(treeCapacity);
+        this.minTree = new MinSegmentTree(treeCapacity);
         this.maxPriority = 1.0;
     }
 
@@ -65,29 +65,29 @@ class PrioritizedReplayBuffer extends ReplayBuffer {
 
     sampleProportional(batchSize) {
         const reservoir = [];
-        const pTotal = this.sumTree.sum(0, len(this.buffer) - 1);
+        const pTotal = this.sumTree.sum(0, this.buffer.length - 1);
         const everyRangeLen = pTotal / batchSize; 
         var mass, idx;
         for (var i = 0; i < batchSize; i += 1) {
             mass = Math.random() * everyRangeLen + i * everyRangeLen;
-            idx = self.sumTree.findPrefixSumIdx(mass);
+            idx = this.sumTree.findPrefixSumIdx(mass);
             reservoir.push(idx);
         }
         return reservoir;
     }
 
     sample(batchSize, beta) {
-        const idxes = self.sampleProportional(batchSize);
+        const idxes = this.sampleProportional(batchSize);
 
         const weights = [];
-        const total = self.sumTree.sum();
-        const pMin = self.minTree.min() / total;
-        const maxWeight = Math.pow((pMin * len(self.buffer)), -beta);
+        const total = this.sumTree.sum();
+        const pMin = this.minTree.min() / total;
+        const maxWeight = Math.pow((pMin * this.buffer.length), -beta);
         var pSample, weight, idx;
         for (var i = 0; i < idxes.length; i += 1) {
             idx = idxes[i];
-            pSample = self.sumTree.get(idx) / total;
-            weight = Math.pow((pSample * len(self.buffer)), -beta);
+            pSample = this.sumTree.get(idx) / total;
+            weight = Math.pow((pSample * this.buffer.length), -beta);
             weights.push(weight / maxWeight);
         }
 

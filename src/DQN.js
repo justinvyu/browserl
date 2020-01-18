@@ -64,14 +64,14 @@ class DeepQLearner {
                 ctx = null,
                 lr = 5e-4,
                 bufferSize = 5e4,
-                prioritizedReplay = false,
+                prioritizedReplay = true,
                 prioritizedReplayAlpha = 0.6,
                 prioritizedReplayBeta0 = 0.4,
                 prioritizedReplayBetaIters = 1e4,
                 prioritizedReplayEps = 1e-6,
                 trainFreq = 1,
                 batchSize = 32,
-                learningStarts = 32,
+                learningStarts = 1000,
                 gamma = 0.999,
                 tau = 0.999,
                 targetNetworkUpdateFreq = 500,
@@ -84,6 +84,7 @@ class DeepQLearner {
 
         this.prioritizedReplay = prioritizedReplay;
         this.prioritizedReplayAlpha = prioritizedReplayAlpha;
+        this.prioritizedReplayEps = prioritizedReplayEps;
 
         this.trainFreq = trainFreq;
         this.batchSize = batchSize;
@@ -203,12 +204,15 @@ class DeepQLearner {
             // const {values, grads} = tf.variableGrads(() => { return tf.tidy(() => {
             const bellmanError = this.optimizer.minimize(() => { return tf.tidy(() => {
                 /* === Sample training batch from replay buffer === */
-                var trainBatch;
+                var trainBatch, importanceWeights, batchIdxes;
                 if (this.prioritizedReplay) {
                     const {batch, weights, idxes} = this.replayBuffer.sample(this.batchSize, this.betaSchedule.getAndAdvance());
                     trainBatch = this.convertToTensor(batch);
+                    batchIdxes = idxes;
+                    importanceWeights = tf.tensor(weights, [this.batchSize, 1]);
                 } else {
                     trainBatch = this.convertToTensor(this.replayBuffer.sample(this.batchSize));
+                    importanceWeights = tf.ones([this.batchSize, 1]);
                 }
 
                 /* === Calculate Q(s, a) and Q'(s', a') === */
@@ -242,7 +246,17 @@ class DeepQLearner {
                 const tdError = selectedQ.sub(tdTarget);
 
                 /* === Compute loss === */
-                const loss = tf.losses.huberLoss(tdTarget, selectedQ);
+                const loss = tf.losses.huberLoss(tdTarget, selectedQ, importanceWeights);
+
+                // const errors = huberLoss(tdError);
+                // errors.print();
+                // const loss = errors.mul(importanceWeights).mean();
+                // loss.print();
+
+                if (this.prioritizedReplay) {
+                    const newPriorities = tf.abs(tdError).add(this.prioritizedReplayEps);
+                    this.replayBuffer.updatePriorities(batchIdxes, newPriorities.dataSync());
+                }
                 
                 return loss;
             }) }, true, this.Q.getWeights());

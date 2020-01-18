@@ -7,7 +7,7 @@ class SegmentTree {
 
     reduceHelper(start, end, node, nodeStart, nodeEnd) {
         if (start == nodeStart && end == nodeEnd) {
-            return self.value[node];
+            return this.value[node];
         }
         const mid = Math.floor((nodeStart + nodeEnd) / 2);
         if (end <= mid) {
@@ -59,7 +59,7 @@ class SumSegmentTree extends SegmentTree {
     }
 
     findPrefixSumIdx(prefixSum) {
-        idx = 1;
+        var idx = 1;
         while (idx < this.capacity) { // while non-leaf
             if (this.value[2 * idx] > prefixSum) {
                 idx *= 2;

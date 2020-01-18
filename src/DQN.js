@@ -1,42 +1,3 @@
-class ReplayBuffer {
-    constructor(size) {
-        this.maxSize = size;
-        this.buffer = [];
-        this.nextIndex = 0;
-    }
-
-    add(obs, action, reward, nextObs, done) {
-        const data = { obs, action, reward, nextObs, done };
-        if (this.nextIndex >= this.buffer.length) {
-            this.buffer.push(data);
-        } else {
-            this.buffer[this.nextIndex] = data;
-        }
-        this.nextIndex = (this.nextIndex + 1) % this.maxSize;
-    }
-
-    sample(batchSize) {
-        // Sample without replacement
-        var sample = _.sample(this.buffer, batchSize);
-        var _obs = [], _act = [], _rew = [], _nextObs = [], _done = [];
-        for (var i = 0; i < batchSize; i += 1) {
-            const {obs, action, reward, nextObs, done} = sample[i];
-            _obs.push(obs);
-            _act.push(action);
-            _rew.push(reward);
-            _nextObs.push(nextObs);
-            _done.push(done);
-        }
-        return {
-            'obs': _obs,
-            'action': _act,
-            'reward': _rew,
-            'nextObs': _nextObs,
-            'done': _done
-        };
-    }
-}
-
 class EpsilonGreedyPolicy {
     constructor(Q, env, epsilonSchedule) {
         this.Q = Q;
@@ -63,21 +24,19 @@ class EpsilonGreedyPolicy {
 }
 
 class LinearSchedule {
-    constructor(start, end, step) {
-        this.eps = start;
+    constructor(start, end, numSteps) {
+        this.val = start;
         this.end = end;
-        this.step = step;
-        if (start - end > 0) {
-            this.step *= -1;
-        }
+        this.numSteps = numSteps;
+        this.step = (end - start) / numSteps;
     }
 
     getAndAdvance() {
-        const old = this.eps;
+        const old = this.val;
         if (this.step < 0) {
-            this.eps = Math.max(this.end, this.eps + this.step);
+            this.val = Math.max(this.end, this.val + this.step);
         } else {
-            this.eps = Math.min(this.end, this.eps + this.step);
+            this.val = Math.min(this.end, this.val + this.step);
         }
         return old;
     }
@@ -105,9 +64,14 @@ class DeepQLearner {
                 ctx = null,
                 lr = 5e-4,
                 bufferSize = 5e4,
+                prioritizedReplay = false,
+                prioritizedReplayAlpha = 0.6,
+                prioritizedReplayBeta0 = 0.4,
+                prioritizedReplayBetaIters = 1e4,
+                prioritizedReplayEps = 1e-6,
                 trainFreq = 1,
                 batchSize = 32,
-                learningStarts = 1000,
+                learningStarts = 32,
                 gamma = 0.999,
                 tau = 0.999,
                 targetNetworkUpdateFreq = 500,
@@ -117,6 +81,10 @@ class DeepQLearner {
         this.targetQ = targetQ;
         this.lr = lr;
         this.bufferSize = bufferSize;
+
+        this.prioritizedReplay = prioritizedReplay;
+        this.prioritizedReplayAlpha = prioritizedReplayAlpha;
+
         this.trainFreq = trainFreq;
         this.batchSize = batchSize;
         this.learningStarts = learningStarts;
@@ -125,8 +93,17 @@ class DeepQLearner {
         this.printFreq = printFreq;
 
         this.timestep = 0;
-        this.replayBuffer = new ReplayBuffer(this.bufferSize);
-        this.policy = new EpsilonGreedyPolicy(this.Q, this.env, new LinearSchedule(1, 0, 0.0001));
+
+        if (this.prioritizedReplay) {
+            this.replayBuffer = new PrioritizedReplayBuffer(this.bufferSize, this.prioritizedReplayAlpha);
+            this.betaSchedule = new LinearSchedule(prioritizedReplayBeta0, 1.0, prioritizedReplayBetaIters);
+
+        } else {
+            this.replayBuffer = new ReplayBuffer(this.bufferSize);
+            this.betaSchedule = null;
+        }
+
+        this.policy = new EpsilonGreedyPolicy(this.Q, this.env, new LinearSchedule(1, 0, 1e4));
         this.optimizer = tf.train.adam(this.lr);
 
         this.render = render;
@@ -153,7 +130,6 @@ class DeepQLearner {
                     this.replayBuffer.add(currObs, randAction, reward, obs, done);
                     this.timestep += 1;
                     this.env.render(this.ctx);
-                    // TODO: Make this cleaner
                     if (done) {
                         this.env.reset();
                     }
@@ -227,7 +203,13 @@ class DeepQLearner {
             // const {values, grads} = tf.variableGrads(() => { return tf.tidy(() => {
             const bellmanError = this.optimizer.minimize(() => { return tf.tidy(() => {
                 /* === Sample training batch from replay buffer === */
-                const trainBatch = this.convertToTensor(this.replayBuffer.sample(this.batchSize));
+                var trainBatch;
+                if (this.prioritizedReplay) {
+                    const {batch, weights, idxes} = this.replayBuffer.sample(this.batchSize, this.betaSchedule.getAndAdvance());
+                    trainBatch = this.convertToTensor(batch);
+                } else {
+                    trainBatch = this.convertToTensor(this.replayBuffer.sample(this.batchSize));
+                }
 
                 /* === Calculate Q(s, a) and Q'(s', a') === */
                 const currObsQVals = this.Q.predict(trainBatch.obs);
@@ -239,7 +221,8 @@ class DeepQLearner {
                 // tf.oneHot(...) = batchSize x numActions
                 // Then reduce along the 1st axis (summing over the rows), to get batchSize x 1
                 const selectedQ = tf.sum(currObsQVals.mul(
-                    tf.oneHot(trainBatch.action, this.env.actionSpace.numActions).reshape(currObsQVals.shape)), 1, true);
+                    tf.oneHot(trainBatch.action, this.env.actionSpace.numActions)
+                      .reshape(currObsQVals.shape)), 1, true);
 
                 /* === Sample training batch from replay buffer === */
                 // Double DQN, y = r + gamma * Q_target(s', argmax_{a'} Q(s', a'))
@@ -256,9 +239,11 @@ class DeepQLearner {
 
                 /* === Calculate Q-learning TD target === */
                 const tdTarget = trainBatch.reward.add(tf.scalar(this.gamma).mul(maxNextObsQ));
+                const tdError = selectedQ.sub(tdTarget);
 
                 /* === Compute loss === */
                 const loss = tf.losses.huberLoss(tdTarget, selectedQ);
+                
                 return loss;
             }) }, true, this.Q.getWeights());
             // })});
